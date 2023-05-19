@@ -36,7 +36,7 @@
         AWACSNotify = function(str) if ToggleNotify then if NotifMode == 2 then util.show_corner_help("AWACS Detection System".."~s~~n~"..str ) else util.toast("AWACS Detection System".."\n\n"..str) end end end
         AvailableSession =  function() return util.is_session_started() and not util.is_session_transition_active() end
 
-        local script_resources = filesystem.resources_dir() .. "AerialFleets" -- Redirects to %appdata%\Stand\Lua Scripts\resources\Inter
+        local script_resources = filesystem.resources_dir() .. "AerialFleets" -- Redirects to %appdata%\Stand\Lua Scripts\resources\AerialFleets
         if not filesystem.is_dir(script_resources) then
             filesystem.mkdirs(script_resources)
         end
