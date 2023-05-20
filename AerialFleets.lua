@@ -27,7 +27,7 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.91"
+        local SCRIPT_VERSION = "1.91-AG"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -674,27 +674,26 @@
 
         RandomizePlane = PlaneParts:toggle_loop("Toggle Random Plane", {}, "", function()end)
         PlaneParts:action("Send Air Force", {"afusafsp"}, "Sending America to war and intervene more planes.\nWARNING: The action is irreversible in the session if toggle godmode on.\nNOTE: Toggle Exclude features.", function()
+            local playerList = players.list(EToggleSelf, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+            local delay = menu.get_value(delayAirForce) * 1000
             if menu.get_value(RandomizePlane) == true then
-                local playerList = players.list(true, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                local counter = 0
-                local max_iterations = 5
-                while counter < max_iterations do
+                playerList = players.list(true, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+                local maxIterations = 5
+                for _ = 1, maxIterations do
                     for _, pid in pairs(playerList) do
-                        if AvailableSession() then
+                        if AvailableSession() and not players.is_in_interior(pid) then
                             local randomModel = planeModels1[math.random(#planeModels1)]
                             AggressivePlanes(pid, randomModel)
-                            util.yield(menu.get_value(delayAirForce) * 1000)
+                            util.yield(delay)
                         end
                     end
-                    counter = counter + 1
                 end
             else
-                local playerList = players.list(EToggleSelf, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
                 for _, pid in pairs(playerList) do
-                    if AvailableSession() then
-                        for i = 1, menu.get_value(PlaneCount) do
+                    if AvailableSession() and not players.is_in_interior(pid) then
+                        for _ = 1, menu.get_value(PlaneCount) do
                             harass_vehicle(pid, planesHash, true, false)
-                            util.yield(menu.get_value(delayAirForce) * 1000)
+                            util.yield(delay)
                         end
                     end
                 end
@@ -778,94 +777,75 @@
         CustomVehicleTF:divider("Sending Planes")
         -- Send Air Force (Task Force) - Surface
         CustomVehicleTF:action("Send Air Force (Task Force) - Custom Surface", {""}, "Sending America to war and intervene more custom planes (Real Undetectable).\nWARNING: The action is irreversible in the session bcz godmode permanent.\n\nSome peds can fall and attach you.", function()
-            if menu.get_value(CustomVehicleAdvanced) == true then
-                local player = PLAYER.PLAYER_PED_ID()
-                local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                    local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
-                    if vehicleClass == 19 then
-                        local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                        local textInput = display_onscreen_keyboard()
-                        if textInput == "" or textInput == nil then return end
-                        local modelHash = util.joaat(textInput)
-                        if STREAMING.IS_MODEL_VALID(modelHash) and STREAMING.IS_MODEL_A_VEHICLE(modelHash) then
-                            if menu.get_value(ShowMessages) == true then
-                                for i = delayCountdown, 1, -1 do
-                                    AerialFleetsNotify("Ready in "..i.." seconds.")
-                                    util.yield(1000)
-                                end
-                                chat.send_message(specialMsg, false, true, true)
-                            end
-                            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
-                            if vehicleClass == 15 or vehicleClass == 16 then
-                                for _, pid in pairs(playerList) do
-                                    if AvailableSession() then
-                                        if not players.is_in_interior(pid) then
-                                            escort_attack(pid, textInput, true)
-                                            util.yield(delaySpawning * 1000)
-                                        end
-                                    end
-                                end
-                            else
-                                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes or helicopters are allowed.")
-                            end
-                        else
-                            AerialFleetsNotify("I'm sorry, we cannot send the plane named: " .. textInput)
-                        end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
-                    end
-                else
-                    AerialFleetsNotify("Sit down in a vehicle.")
+            if menu.get_value(CustomVehicleAdvanced) ~= true then AerialFleetsNotify("I'm sorry, enable \"Custom Vehicle\" to use more advantages.") return end
+            local player = PLAYER.PLAYER_PED_ID()
+            local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
+            if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
+            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
+            if vehicleClass ~= 19 then AerialFleetsNotify("To operate the action, you need to be in a military vehicle.") return end
+            local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+            local textInput = display_onscreen_keyboard()
+            if textInput == "" or textInput == nil then return end
+            local modelHash = util.joaat(textInput)
+            if not (STREAMING.IS_MODEL_VALID(modelHash) and STREAMING.IS_MODEL_A_VEHICLE(modelHash)) then
+                AerialFleetsNotify("I'm sorry, we cannot send the plane named: " .. textInput)
+                return
+            end
+            if menu.get_value(ShowMessages) == true then
+                for i = delayCountdown, 1, -1 do
+                    AerialFleetsNotify("Ready in "..i.." seconds.")
+                    util.yield(1000)
                 end
-            else
-                AerialFleetsNotify("I'm sorry, enable \"Custom Vehicle\" to use more advantages.")
+                chat.send_message(specialMsg, false, true, true)
+            end
+            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
+            if vehicleClass ~= 15 and vehicleClass ~= 16 then
+                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes or helicopters are allowed.")
+                return
+            end
+            for _, pid in pairs(playerList) do
+                if AvailableSession() and not players.is_in_interior(pid) then
+                    escort_attack(pid, textInput, true)
+                    util.yield(delaySpawning * 1000)
+                end
             end
         end)
 
         -- Send Air Force (Task Force) Custom
         CustomVehicleTF:action("Send Air Force (Task Force) - Custom Aerial", {""}, "Sending America to war and intervene more custom planes (Real Undetectable).\nWARNING: The action is irreversible in the session bcz godmode permanent.\n\nSome peds can fall and attach you.", function()
-            if menu.get_value(CustomVehicleAdvanced) == true then
-                local player = PLAYER.PLAYER_PED_ID()
-                local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                    if PED.IS_PED_IN_ANY_PLANE(player) or PED.IS_PED_IN_ANY_HELI(player) then
-                        local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                        local textInput = display_onscreen_keyboard()
-                        if textInput == "" or textInput == nil then return end
-                        local modelHash = util.joaat(textInput)
-                        if STREAMING.IS_MODEL_VALID(modelHash) and STREAMING.IS_MODEL_A_VEHICLE(modelHash) then
-                            if menu.get_value(ShowMessages) == true then
-                                for i = delayCountdown, 1, -1 do
-                                    AerialFleetsNotify("Ready in "..i.." seconds.")
-                                    util.yield(1000)
-                                end
-                                chat.send_message(specialMsg, false, true, true)
-                            end
-                            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
-                            if vehicleClass == 15 or vehicleClass == 16 then
-                                for _, pid in pairs(playerList) do
-                                    if AvailableSession() then
-                                        if not players.is_in_interior(pid) then
-                                            escort_attack(pid, textInput, false)
-                                            util.yield(delaySpawning * 1000)
-                                        end
-                                    end
-                                end
-                            else
-                                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes are allowed.")
-                            end
-                        else
-                            AerialFleetsNotify("I'm sorry, we cannot send the plane named: " .. textInput)
-                        end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.")
-                    end
-                else
-                    AerialFleetsNotify("Sit down in a vehicle.")
+            if menu.get_value(CustomVehicleAdvanced) ~= true then AerialFleetsNotify("I'm sorry, enable \"Custom Vehicle\" to use more advantages.") return end
+            local player = PLAYER.PLAYER_PED_ID()
+            local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
+            if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
+            if not (PED.IS_PED_IN_ANY_PLANE(player) or PED.IS_PED_IN_ANY_HELI(player)) then
+                AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.")
+                return
+            end
+            local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+            local textInput = display_onscreen_keyboard()
+            if textInput == "" or textInput == nil then return end
+            local modelHash = util.joaat(textInput)
+            if not (STREAMING.IS_MODEL_VALID(modelHash) and STREAMING.IS_MODEL_A_VEHICLE(modelHash)) then
+                AerialFleetsNotify("I'm sorry, we cannot send the plane named: " .. textInput)
+                return
+            end
+            if menu.get_value(ShowMessages) == true then
+                for i = delayCountdown, 1, -1 do
+                    AerialFleetsNotify("Ready in "..i.." seconds.")
+                    util.yield(1000)
                 end
-            else
-                AerialFleetsNotify("I'm sorry, enable \"Custom Vehicle\" to use more advantages.")
+                chat.send_message(specialMsg, false, true, true)
+            end
+            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
+            if vehicleClass ~= 15 and vehicleClass ~= 16 then
+                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes are allowed.")
+                return
+            end
+            for _, pid in pairs(playerList) do
+                if AvailableSession() and not players.is_in_interior(pid) then
+                    escort_attack(pid, textInput, false)
+                    util.yield(delaySpawning * 1000)
+                end
             end
         end)
 
@@ -899,203 +879,92 @@
         ToggleRandom = TaskForce:toggle_loop("Random Player", {}, "Choose randomly players in the session and target automatically.", function()end)
         ToggleSurfaceTASK = TaskForce:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control.\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
         TaskForce:action("Target Player", {"aftarget"}, "We need more communication and more precise for informations.\nTarget player is the priority objective for your choice if the player is in the session.", function()
-            if menu.get_value(ToggleRandom) == true then
-                if not menu.get_value(ToggleSurfaceTASK) == true then
-                    local player = PLAYER.PLAYER_PED_ID()
-                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                    if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                        if PED.IS_PED_IN_ANY_PLANE(player) or PED.IS_PED_IN_ANY_HELI(player) then
-                            local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                            if #playerList > 0 then
-                                local randomIndex = math.random(#playerList)
-                                local playerId = playerList[randomIndex]
-                                local playerName = players.get_name(playerId)
-                                if AvailableSession() then
-                                    local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(playerId)
-                                    local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                                    local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                                    if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                                        if vehicleClass == 15 or vehicleClass == 16 then
-                                            menu.trigger_commands("vehkick"..players.get_name(playerId))
-                                            TASK.TASK_LEAVE_VEHICLE(playerId, vehicle, math.random(0, 1))
-                                            VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                                            VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                                            TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                                        end
-                                    end
-                                    if not players.is_in_interior(playerId) and players.get_name(playerId) ~= "UndiscoveredPlayer" then
-                                        escort_attack(playerId, modelVehicle, false)
-                                        AerialFleetsNotify("Confirmed target player: "..playerName..".".."\nReady to target, roger that. Thanks for the information.")
-                                    else
-                                        AerialFleetsNotify("I'm sorry, you cannot target "..playerName.." while sitting on the base. But I have an idea to force. Let's US Army to do something.")
-                                        menu.trigger_commands("apt"..math.random(1, 114)..playerName)
-                                    end
-                                end
-                            else
-                                AerialFleetsNotify("No players are currently in the session.")
-                            end
-                        else
-                            AerialFleetsNotify("To operate the action, you need to be in a plane/heli to operate plane or chopper.")
-                        end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a vehicle.")
+            local isSurfaceTask = menu.get_value(ToggleSurfaceTASK) == true
+            local isRandomToggle = menu.get_value(ToggleRandom) == true
+            local player = PLAYER.PLAYER_PED_ID()
+            local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
+            if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("To operate the action, you need to be in a vehicle.") return end
+            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
+            if isSurfaceTask then if vehicleClass ~= 19 then
+                    AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
+                    return
+                end
+            else
+                if not (PED.IS_PED_IN_ANY_PLANE(player) or PED.IS_PED_IN_ANY_HELI(player)) then
+                    AerialFleetsNotify("To operate the action, you need to be in a plane or helicopter.")
+                    return
+                end
+            end
+            local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+            if #playerList == 0 then
+                AerialFleetsNotify("No players are currently in the session.")
+                return
+            end
+            if isRandomToggle then
+                local randomIndex = math.random(#playerList)
+                local playerId = playerList[randomIndex]
+                local playerName = players.get_name(playerId)
+                if not AvailableSession() then
+                    AerialFleetsNotify("Unable to target player due to session availability.")
+                    return
+                end
+                local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(playerId)
+                local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
+                if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
+                    if vehicleClass == 15 or vehicleClass == 16 then
+                        menu.trigger_commands("vehkick"..players.get_name(playerId))
+                        TASK.TASK_LEAVE_VEHICLE(playerId, vehicle, math.random(0, 1))
+                        VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                        VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                        TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
                     end
+                end
+                if not players.is_in_interior(playerId) then
+                    escort_attack(playerId, modelVehicle, isSurfaceTask)
+                    AerialFleetsNotify("Confirmed target player: "..playerName..".".."\nReady to target, roger that. Thanks for the information.")
                 else
-                    local player = PLAYER.PLAYER_PED_ID()
-                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                    if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                        local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
-                        if vehicleClass == 19 then
-                            local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                            if #playerList > 0 then
-                                local randomIndex = math.random(#playerList)
-                                local playerId = playerList[randomIndex]
-                                local playerName = players.get_name(playerId)
-                                if AvailableSession() then
-                                    local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(playerId)
-                                    local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                                    local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                                    if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                                        if vehicleClass == 15 or vehicleClass == 16 then
-                                            menu.trigger_commands("vehkick"..players.get_name(playerId))
-                                            TASK.TASK_LEAVE_VEHICLE(playerId, vehicle, math.random(0, 1))
-                                            VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                                            VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                                            TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                                        end
-                                    end
-                                    if not players.is_in_interior(playerId) and players.get_name(playerId) ~= "UndiscoveredPlayer" then
-                                        escort_attack(playerId, modelVehicle, true)
-                                        AerialFleetsNotify("Confirmed target player: "..playerName..".".."\nReady to target, roger that. Thanks for the information.")
-                                    else
-                                        AerialFleetsNotify("I'm sorry, you cannot target "..playerName.." while sitting on the base. But I have an idea to force. Let's US Army to do something.")
-                                        menu.trigger_commands("apt"..math.random(1, 114)..playerName)
-                                    end
-                                end
-                            else
-                                AerialFleetsNotify("No players are currently in the session.")
-                            end
-                        else
-                            AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
-                        end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a vehicle.")
+                    AerialFleetsNotify("I'm sorry, you cannot target "..playerName.." while staying on the base. But I have an idea to force. Let's US Army do something.")
+                    for i = 1, 5 do
+                        menu.trigger_commands("apt"..math.random(1, 114)..playerName)
                     end
                 end
             else
-                if not menu.get_value(ToggleSurfaceTASK) == true then
-                    local player = PLAYER.PLAYER_PED_ID()
-                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                    if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                        if PED.IS_PED_IN_ANY_PLANE(player) or PED.IS_PED_IN_ANY_HELI(player) then
-                            local textInput = display_onscreen_keyboard()
-                            local playerList = players.list(EToggleSelf, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                            if EToggleSelf then
-                                for _, pid in ipairs(playerList) do
-                                    if pid == players.user() and textInput == players.get_name(pid) then
-                                        AerialFleetsNotify("You cannot send escort to kill yourself.")
-                                        return
-                                    end
-                                end
+                local textInput = display_onscreen_keyboard()
+                if textInput == nil or textInput == "" then
+                    return
+                end
+                local isUserFound = false
+                for _, pid in ipairs(playerList) do
+                    local playerName = players.get_name(pid)
+                    if playerName == textInput then
+                        isUserFound = true
+                        local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                        local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                        local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
+                        if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
+                            if vehicleClass == 15 or vehicleClass == 16 then
+                                menu.trigger_commands("vehkick"..players.get_name(pid))
+                                TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
+                                VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                                VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                                TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
                             end
-                            if textInput == nil or textInput == "" then return
-                            else
-                                local isUserFound = false
-                                for _, pid in ipairs(playerList) do
-                                    local playerName = players.get_name(pid)
-                                    if playerName == textInput then
-                                        isUserFound = true
-                                        local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                                        local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                                        local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                                        if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                                            if vehicleClass == 15 or vehicleClass == 16 then
-                                                menu.trigger_commands("vehkick"..players.get_name(pid))
-                                                TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
-                                                VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                                                VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                                                TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                                            end
-                                        end
-                                        if not players.is_in_interior(pid) then
-                                            AerialFleetsNotify("Confirmed target player: "..textInput..".".."\nReady to target, roger that. Thanks for the information.")
-                                            escort_attack(pid, modelVehicle, false)
-                                            break
-                                        else
-                                            AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army do something.")
-                                            for i = 1, 5 do
-                                                menu.trigger_commands("apt"..math.random(1, 114)..textInput)
-                                            end
-                                        end
-                                    end
-                                end
-                                if not isUserFound then
-                                    AerialFleetsNotify("Error STATUS: The US Air Force cannot recognize the user named "..textInput)
-                                end
-                            end
-                        else
-                            AerialFleetsNotify("To operate the action, you need to be in a plane or chopper to operate plane or helicopter.")
                         end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a vehicle.")
-                    end
-                else
-                    local player = PLAYER.PLAYER_PED_ID()
-                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                    if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                        local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
-                        if vehicleClass == 19 then
-                            local textInput = display_onscreen_keyboard()
-                            local playerList = players.list(EToggleSelf, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                            if EToggleSelf then
-                                for _, pid in ipairs(playerList) do
-                                    if pid == players.user() and textInput == players.get_name(pid) then
-                                        AerialFleetsNotify("You cannot send escort to kill yourself.")
-                                        return
-                                    end
-                                end
-                            end
-                            if textInput == nil or textInput == "" then return
-                            else
-                                local isUserFound = false
-                                for _, pid in ipairs(playerList) do
-                                    local playerName = players.get_name(pid)
-                                    if playerName == textInput then
-                                        isUserFound = true
-                                        local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                                        local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                                        local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                                        if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                                            if vehicleClass == 15 or vehicleClass == 16 then
-                                                menu.trigger_commands("vehkick"..players.get_name(pid))
-                                                TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
-                                                VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                                                VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                                                TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                                            end
-                                        end
-                                        if not players.is_in_interior(pid) then
-                                            AerialFleetsNotify("Confirmed target player: "..textInput..".".."\nReady to target, roger that. Thanks for the information.")
-                                            escort_attack(pid, modelVehicle, true)
-                                            break
-                                        else
-                                            AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army do something.")
-                                            for i = 1, 5 do
-                                                menu.trigger_commands("apt"..math.random(1, 114)..textInput)
-                                            end
-                                        end
-                                    end
-                                end
-                                if not isUserFound then
-                                    AerialFleetsNotify("Error STATUS: The US Air Force cannot recognize the user named "..textInput)
-                                end
-                            end
+                        if not players.is_in_interior(pid) then
+                            AerialFleetsNotify("Confirmed target player: "..textInput..".".."\nReady to target, roger that. Thanks for the information.")
+                            escort_attack(pid, modelVehicle, isSurfaceTask)
+                            break
                         else
-                            AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
+                            AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army do something.")
+                            for i = 1, 5 do
+                                menu.trigger_commands("apt"..math.random(1, 114)..textInput)
+                            end
                         end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a vehicle.")
                     end
+                end
+                if not isUserFound then
+                    AerialFleetsNotify("Error STATUS: The US Air Force cannot recognize the user named "..textInput)
                 end
             end
         end)
@@ -1174,65 +1043,45 @@
             local spawnerName = spawner[1]
             local spawnerModel = spawner[2]
             PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask"..spawnerModel}, "", function()
+                local player = PLAYER.PLAYER_PED_ID()
+                local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
+                local isSurfaceTF = menu.get_value(ToggleSurfaceTF) == true
+                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
+                local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+                local showingMsgs = menu.get_value(ShowingMSGS) == true
                 if menu.get_value(CustomPresets) == true then
-                    if not menu.get_value(ToggleSurfaceTF) == true then
-                        local player = PLAYER.PLAYER_PED_ID()
-                        local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                        if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                            if PED.IS_PED_IN_ANY_PLANE(player) then
-                                local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                                if menu.get_value(ShowingMSGS) == true then
-                                    for i = delayCountdownTF, 1, -1 do
-                                        AerialFleetsNotify("Ready in "..i.." seconds.")
-                                        util.yield(1000)
-                                    end
-                                    chat.send_message(msgPresets, false, true, true)
-                                end
-                                for _, pid in pairs(playerList) do
-                                    if AvailableSession() then
-                                        if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
-                                            escort_attack(pid, spawnerModel, false)
-                                            util.yield(delaySpawningPresets * 1000)
-                                        end
-                                    end
-                                end
-                            else
-                                AerialFleetsNotify("To operate the action, you need to be in a plane to operate plane.")
-                            end
-                        else
-                            AerialFleetsNotify("Please sit down in a vehicle.")
+                    if isSurfaceTF then
+                        if vehicleClass ~= 19 then
+                            AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
+                            return
                         end
-                    else
-                        local player = PLAYER.PLAYER_PED_ID()
-                        local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                        if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
-                            if vehicleClass == 19 then
-                                local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                                if menu.get_value(ShowingMSGS) == true then
-                                    for i = 3, 1, -1 do
-                                        AerialFleetsNotify("Ready in "..i.." seconds.")
-                                        util.yield(1000)
-                                    end
-                                    chat.send_message(msgPresets, false, true, true) 
-                                end
-                                for _, pid in pairs(playerList) do
-                                    if AvailableSession() then
-                                        if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
-                                            escort_attack(pid, spawnerModel, true)
-                                            util.yield(delaySpawningPresets * 1000)
-                                        end
-                                    end
-                                end
-                            else
-                                AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
-                            end
-                        else
-                            AerialFleetsNotify("Please sit down in a vehicle.")
-                        end
+                    elseif not PED.IS_PED_IN_ANY_PLANE(player) then
+                        AerialFleetsNotify("To operate the action, you need to be in a plane.")
+                        return
                     end
                 else
                     AerialFleetsNotify("Please enable \"Toggle Preset Vehicle\" to work for "..spawnerName)
+                    return
+                end
+                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
+                    AerialFleetsNotify("Please sit down in a vehicle.")
+                    return
+                end
+                if showingMsgs then
+                    local countdown = isSurfaceTF and 3 or delayCountdownTF
+                    for i = countdown, 1, -1 do
+                        AerialFleetsNotify("Ready in "..i.." seconds.")
+                        util.yield(1000)
+                    end
+                    chat.send_message(msgPresets, false, true, true)
+                end
+                for _, pid in pairs(playerList) do
+                    if AvailableSession() then
+                        if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                            escort_attack(pid, spawnerModel, isSurfaceTF)
+                            util.yield(delaySpawningPresets * 1000)
+                        end
+                    end
                 end
             end)
         end
@@ -1309,45 +1158,45 @@
             local spawnerName = spawner[1]
             local spawnerModel = spawner[2]
             DLCs:action(spawnerName, {"afdlc"..spawnerModel}, "", function()
-                if menu.get_value(EnableDLCS) == true then
-                    local player = PLAYER.PLAYER_PED_ID()
-                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                    if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                        if PED.IS_PED_IN_ANY_PLANE(player) then
-                            local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                            local modelHash = util.joaat(spawnerModel)
-                            if STREAMING.IS_MODEL_VALID(modelHash) then
-                                if STREAMING.IS_MODEL_A_VEHICLE(modelHash) then
-                                    if menu.get_value(ShowingMSGDLC) == true then 
-                                        for i = delayCountdownDLC, 1, -1 do
-                                            AerialFleetsNotify("Ready in "..i.." seconds.")
-                                            util.yield(1000)
-                                        end
-                                        chat.send_message(dlcMsgs, false, true, true) 
-                                    end
-                                    AerialFleetsNotify("Confirmed target. The US Air Force is coming soon. Sending tons of "..spawnerName..".".."\nReady to target, roger that. Thanks for the information.")
-                                    for _, pid in pairs(playerList) do
-                                        if AvailableSession() then
-                                            if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
-                                                escort_attack(pid, spawnerModel, false)
-                                                util.yield(delaySpawningDLC * 1000)
-                                            end
-                                        end
-                                    end
-                                else
-                                    AerialFleetsNotify("I'm sorry, we cannot send the plane named: "..spawnerName)
-                                end
-                            else
-                                AerialFleetsNotify("Make sure you need to load the model: "..spawnerName)
-                            end
-                        else
-                            AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.")
-                        end
-                    else
-                        AerialFleetsNotify("Sit down in a vehicle.")
-                    end
-                else
+                if menu.get_value(EnableDLCS) ~= true then
                     AerialFleetsNotify("I'm sorry, please enable \"Custom Vehicles\" to make work DLCs Customs.")
+                    return
+                end
+                local player = PLAYER.PLAYER_PED_ID()
+                local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
+                local isSurfaceDLC = not PED.IS_PED_IN_ANY_PLANE(player)
+                local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+                local modelHash = util.joaat(spawnerModel)
+                local showingMsgs = menu.get_value(ShowingMSGDLC) == true
+                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
+                    AerialFleetsNotify("Sit down in a vehicle.")
+                    return
+                end
+                if isSurfaceDLC then
+                    AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.")
+                    return
+                end
+                if not STREAMING.IS_MODEL_VALID(modelHash) then
+                    AerialFleetsNotify("Make sure you need to load the model: "..spawnerName)
+                    return
+                end
+                if not STREAMING.IS_MODEL_A_VEHICLE(modelHash) then
+                    AerialFleetsNotify("I'm sorry, we cannot send the plane named: "..spawnerName)
+                    return
+                end
+                if showingMsgs then
+                    for i = delayCountdownDLC, 1, -1 do
+                        AerialFleetsNotify("Ready in "..i.." seconds.")
+                        util.yield(1000)
+                    end
+                    chat.send_message(dlcMsgs, false, true, true) 
+                end
+                AerialFleetsNotify("Confirmed target. The US Air Force is coming soon. Sending tons of "..spawnerName..".".."\nReady to target, roger that. Thanks for the information.")
+                for _, pid in pairs(playerList) do
+                    if AvailableSession() and not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                        escort_attack(pid, spawnerModel, false)
+                        util.yield(delaySpawningDLC * 1000)
+                    end
                 end
             end)
         end
@@ -1776,39 +1625,29 @@
             TaskForceP:action("Target Player (Task Force)", {"aerialtf"}, "", function()
                 local player = PLAYER.PLAYER_PED_ID()
                 local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                if PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                    if PED.IS_PED_IN_ANY_HELI(player) or PED.IS_PED_IN_ANY_PLANE(player) then
-                        if pid == players.user() then
-                            AerialFleetsNotify("You cannot target yourself.")
-                        else
-                            local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                            local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                            if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                                if vehicleClass == 15 or vehicleClass == 16 then
-                                    menu.trigger_commands("vehkick"..players.get_name(pid))
-                                    TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
-                                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                                    TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                                end
-                            end
-                            util.yield(1000)
-                            if not players.is_in_interior(pid) then
-                                AerialFleetsNotify("Confirmed target player: "..AerialName..".".."\nReady to target, roger that. Thanks for the information.")
-                                escort_attack(pid, modelVehicleP, false)
-                            else
-                                AerialFleetsNotify("I'm sorry, you cannot target "..AerialName.." while sitting on the base. But I have an idea to force. Let's US Army to do something.")
-                                for i = 1, 5 do
-                                    menu.trigger_commands("apt"..math.random(1, 114)..AerialName)
-                                end
-                            end
-                        end
-                    else
-                        AerialFleetsNotify("To operate the action, you need to be in a plane/helis to operate vehicles.")
-                    end
+                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
+                if not (PED.IS_PED_IN_ANY_HELI(player) or PED.IS_PED_IN_ANY_PLANE(player)) then AerialFleetsNotify("To operate the action, you need to be in a plane/helis to operate vehicles.") return end
+                if pid == players.user() then AerialFleetsNotify("You cannot target yourself.") return end
+                local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
+                if not PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then return end
+                if vehicleClass == 15 or vehicleClass == 16 then
+                    menu.trigger_commands("vehkick"..players.get_name(pid))
+                    TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                    TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
+                end
+                util.yield(1000)
+                if not players.is_in_interior(pid) then
+                    AerialFleetsNotify("Confirmed target player: "..AerialName..".".."\nReady to target, roger that. Thanks for the information.")
+                    escort_attack(pid, modelVehicleP, false)
                 else
-                    AerialFleetsNotify("Sit down in a vehicle.")
+                    AerialFleetsNotify("I'm sorry, you cannot target "..AerialName.." while sitting on the base. But I have an idea to force. Let's US Army do something.")
+                    for i = 1, 5 do
+                        menu.trigger_commands("apt"..math.random(1, 114)..AerialName)
+                    end
                 end
             end)
         end)
