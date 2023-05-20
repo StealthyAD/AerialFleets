@@ -27,9 +27,14 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.92"
+        local SCRIPT_VERSION = "1.93"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
+
+        local aalib = require("aalib")
+        FleetSongs = aalib.play_sound
+        local SND_ASYNC<const> = 0x0001
+        local SND_FILENAME<const> = 0x00020000
 
         AerialFleetsNotify = function(str) if ToggleNotify then if NotifMode == 2 then util.show_corner_help(AerialFleetMSG.."~s~~n~"..str) else util.toast(AerialFleetMSG.."\n\n"..str) end end end
         AWACSNotify = function(str) if ToggleNotify then if NotifMode == 2 then util.show_corner_help("AWACS Detection System".."~s~~n~"..str ) else util.toast("AWACS Detection System".."\n\n"..str) end end end
@@ -38,6 +43,11 @@
         local script_resources = filesystem.resources_dir() .. "AerialFleets" -- Redirects to %appdata%\Stand\Lua Scripts\resources\AerialFleets
         if not filesystem.is_dir(script_resources) then
             filesystem.mkdirs(script_resources)
+        end
+
+        local songs = script_resources .. "/Songs" -- Redirects to %appdata%\Stand\Lua Scripts\resources\AerialFleets\Songs
+        if not filesystem.is_dir(songs) then
+            filesystem.mkdirs(songs)
         end
 
     ---========================================----
@@ -301,6 +311,30 @@
             end
         end
 
+        local randomSongs = {
+            "CaliforniaDreamin",
+            "FortunateSon",
+            "PaintItBlack",
+            "Paranoid",
+        }
+
+        local randomMsgs = {
+            "Smell like Vietnam but we are crazy",
+            "hmm we want freedom and oil",
+            "war is not ready but we are ready",
+            "Good Morning Vietnam",
+            "Ready to fight for freedom?",
+        }
+
+        local function join_path(parent, child)
+            local sub = parent:sub(-1)
+            if sub == "/" or sub == "\\" then
+                return parent .. child
+            else
+                return parent .. "/" .. child
+            end
+        end
+
     ---========================================----
     ---        Exclusion Aerial Fleets
     ---         The part of exclude
@@ -387,6 +421,36 @@
                     name="DisplayMessages",
                     source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/DisplayMessages.txt",
                     script_relpath="resources/AerialFleets/DisplayLogo.txt",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="aalib",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/lib/aalib.dll",
+                    script_relpath="lib/aalib.dll",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="California Dreamin",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/CaliforniaDreamin.wav",
+                    script_relpath="resources/AerialFleets/Songs/CaliforniaDreamin.wav",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="Paint It Black",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/PaintItBlack.wav",
+                    script_relpath="resources/AerialFleets/Songs/PaintItBlack.wav",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="Fortunate Son",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/FortunateSon.wav",
+                    script_relpath="resources/AerialFleets/Songs/FortunateSon.wav",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="Paranoid",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/Paranoid.wav",
+                    script_relpath="resources/AerialFleets/Songs/Paranoid.wav",
                     check_interval=default_check_interval,
                 },
             }
@@ -493,17 +557,6 @@
             planesHash = planeModels[selectedPlaneModel]
         end)
 
-        local planeModels1 = {
-            "molotok",
-            "rogue",
-            "pyro",
-            "nokota",
-            "starling",
-            "mogul",
-            "seabreeze",
-            "strikeforce",
-        }
-
         PlaneParts:action("Send Air Force", {"afusafsp"}, "Sending America to war and intervene more planes.\nWARNING: The action is irreversible in the session if toggle godmode on.\nNOTE: Toggle Exclude features.", function()
             local playerList = players.list(EToggleSelf, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
             local delay = menu.get_value(delayAirForce) * 1000
@@ -551,6 +604,7 @@
         local CustomVehicleTF = TaskForce:list("Custom Parts")
         CustomVehicleAdvanced = CustomVehicleTF:toggle_loop("Custom Vehicle", {}, "", function()end)
         ShowMessages = CustomVehicleTF:toggle_loop("Show Messages", {}, "", function()end)
+        EnableMusics = CustomVehicleTF:toggle_loop("Toggle Musics", {}, "", function()end)
         CustomVehicleTF:text_input("Send Message", {"aftaskforcemsg"}, "America has sent a friend request.", function(typeText)
             if typeText ~= "" then
                 specialMsg = typeText
@@ -606,6 +660,11 @@
                 AerialFleetsNotify("I'm sorry, we cannot send the plane named: " .. textInput)
                 return
             end
+            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
+            if vehicleClass ~= 15 and vehicleClass ~= 16 then
+                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes or helicopters are allowed.")
+                return
+            end
             if menu.get_value(ShowMessages) == true then
                 for i = delayCountdown, 1, -1 do
                     AerialFleetsNotify("Ready in "..i.." seconds.")
@@ -613,10 +672,11 @@
                 end
                 chat.send_message(specialMsg, false, true, true)
             end
-            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
-            if vehicleClass ~= 15 and vehicleClass ~= 16 then
-                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes or helicopters are allowed.")
-                return
+            if menu.get_value(EnableMusics) == true then
+                local randomSong = randomSongs[math.random(#randomSongs)]
+                FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                local randomMSG = randomMsgs[math.random(#randomMsgs)]
+                AerialFleetsNotify(randomMSG)
             end
             for _, pid in pairs(playerList) do
                 if AvailableSession() and not players.is_in_interior(pid) then
@@ -644,6 +704,11 @@
                 AerialFleetsNotify("I'm sorry, we cannot send the plane named: " .. textInput)
                 return
             end
+            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
+            if vehicleClass ~= 15 and vehicleClass ~= 16 then
+                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes are allowed.")
+                return
+            end
             if menu.get_value(ShowMessages) == true then
                 for i = delayCountdown, 1, -1 do
                     AerialFleetsNotify("Ready in "..i.." seconds.")
@@ -651,10 +716,11 @@
                 end
                 chat.send_message(specialMsg, false, true, true)
             end
-            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
-            if vehicleClass ~= 15 and vehicleClass ~= 16 then
-                AerialFleetsNotify("Invalid vehicle model: " .. textInput .. ". Only aerial vehicles planes are allowed.")
-                return
+            if menu.get_value(EnableMusics) == true then
+                local randomSong = randomSongs[math.random(#randomSongs)]
+                FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                local randomMSG = randomMsgs[math.random(#randomMsgs)]
+                AerialFleetsNotify(randomMSG)
             end
             for _, pid in pairs(playerList) do
                 if AvailableSession() and not players.is_in_interior(pid) then
@@ -845,6 +911,7 @@
         end, delayCountdownTF)
 
         ShowingMSGS = PresetSpawningTF:toggle_loop("Show Messages", {}, "", function()end)
+        EnableMusicsTF = PresetSpawningTF:toggle_loop("Toggle Musics", {}, "", function()end)
         CustomPresets = PresetSpawningTF:toggle_loop("Toggle Preset Vehicle", {}, "", function()end)
         ToggleSurfaceTF = PresetSpawningTF:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control.\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
         PresetSpawningTF:divider("Presets Vehicles")
@@ -884,6 +951,12 @@
                     end
                     chat.send_message(msgPresets, false, true, true)
                 end
+                if menu.get_value(EnableMusicsTF) == true then
+                    local randomSong = randomSongs[math.random(#randomSongs)]
+                    FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                    local randomMSG = randomMsgs[math.random(#randomMsgs)]
+                    AerialFleetsNotify(randomMSG)
+                end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
                         if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
@@ -905,6 +978,7 @@
             EnableDLCS = DLCs:toggle_loop("Custom Vehicles", {}, "", function()end)
         end
         ShowingMSGDLC = DLCs:toggle_loop("Show Messages", {}, "", function()end)
+        EnableMusicsDLC = DLCs:toggle_loop("Toggle Musics", {}, "", function()end)
         local delaySpawningDLC = 1
         DLCs:text_input("Delay Time", {"aftimertfdlc"}, "Do not abuse for spawning vehicle, do not go to lower for preventing for crash, mass entities.\n\nMeasured in seconds.", function(typeText)
             if typeText ~= "" then
@@ -999,6 +1073,12 @@
                         util.yield(1000)
                     end
                     chat.send_message(dlcMsgs, false, true, true) 
+                end
+                if menu.get_value(EnableMusicsDLC) == true then
+                    local randomSong = randomSongs[math.random(#randomSongs)]
+                    FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                    local randomMSG = randomMsgs[math.random(#randomMsgs)]
+                    AerialFleetsNotify(randomMSG)
                 end
                 AerialFleetsNotify("Confirmed target. The US Air Force is coming soon. Sending tons of "..spawnerName..".".."\nReady to target, roger that. Thanks for the information.")
                 for _, pid in pairs(playerList) do
@@ -1453,6 +1533,10 @@
     ---            End Part of Script
     ---       The part of useful lua script
     ----========================================----
+
+        util.on_stop(function()
+            FleetSongs(join_path(script_resources, "stops.wav"), SND_FILENAME | SND_ASYNC)
+        end)
 
         if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
             local InterLogo = directx.create_texture(script_resources .. "/AerialFleets.png")
