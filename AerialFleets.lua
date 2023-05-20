@@ -28,7 +28,7 @@
         util.require_natives(1681379138)
         local int_max = 2147483647
 
-        local SCRIPT_VERSION = "1.88"
+        local SCRIPT_VERSION = "1.89"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -568,12 +568,12 @@
 
         local AerialFleets = menu.my_root()
         AerialFleets:divider(AerialFleetMSG)
-        local ExcludeParts = AerialFleets:list("Exclude Parts", {"afexclusions"})
-        local Detections = AerialFleets:list("Detections Parts", {"afdetections"}, "Detect any ways and remove them by consequence.")
-        local TaskForce = AerialFleets:list("Task Force", {"taskforce"}, "Undetectable by modders, take the opportunity to invade the session with aggressive means.".."\n\n"..TaskForceDesc)
-        local PlaneParts = AerialFleets:list("US Air Force Parts", {"afusaf"})
-        local WeatherParts = AerialFleets:list("Weather Parts", {"afweathertimr"})
-        local Settings = AerialFleets:list("Settings Parts", {"afsettings"})
+        local ExcludeParts = AerialFleets:list("Exclusions", {"afexclusions"})
+        local Detections = AerialFleets:list("Detections", {"afdetections"}, "Detect any ways and remove them by consequence.")
+        local TaskForce = AerialFleets:list("Task Force", {"aftaskforce"}, "Undetectable by modders, take the opportunity to invade the session with aggressive means.".."\n\n"..TaskForceDesc.."\n\nThe planes that appear refer to the number of people who are not inside, limited planes to avoid saturation and laggy game.")
+        local PlaneParts = AerialFleets:list("US Air Force", {"afusaf"})
+        local WeatherParts = AerialFleets:list("World & Weather", {"afworld"})
+        local Settings = AerialFleets:list("Settings", {"afsettings"})
 
     ---========================================----
     ---        Exclude Roots for parts
@@ -773,8 +773,10 @@
                             if vehicleClass == 16 then
                                 for _, pid in pairs(playerList) do
                                     if AvailableSession() then
-                                        escort_attack(pid, textInput, true)
-                                        util.yield(delaySpawning * 1000)
+                                        if not players.is_in_interior(pid) then
+                                            escort_attack(pid, textInput, true)
+                                            util.yield(delaySpawning * 1000)
+                                        end
                                     end
                                 end
                             else
@@ -811,8 +813,10 @@
                             if vehicleClass == 15 then
                                 for _, pid in pairs(playerList) do
                                     if AvailableSession() then
-                                        escort_attack(pid, textInput, false)
-                                        util.yield(delaySpawning * 1000)
+                                        if not players.is_in_interior(pid) then
+                                            escort_attack(pid, textInput, false)
+                                            util.yield(delaySpawning * 1000)
+                                        end
                                     end
                                 end
                             else
@@ -871,6 +875,18 @@
                         local playerId = playerList[randomIndex]
                         local playerName = players.get_name(playerId)
                         if AvailableSession() then
+                            local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(playerId)
+                            local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
+                            if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
+                                if vehicleClass == 15 or vehicleClass == 16 then
+                                    menu.trigger_commands("vehkick"..players.get_name(playerId))
+                                    TASK.TASK_LEAVE_VEHICLE(playerId, vehicle, math.random(0, 1))
+                                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                                    TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
+                                end
+                            end
                             if not players.is_in_interior(playerId) and players.get_name(playerId) ~= "UndiscoveredPlayer" then
                                 escort_attack(playerId, modelVehicle, true)
                                 AerialFleetsNotify("Confirmed target player: "..playerName..".".."\nReady to target, roger that. Thanks for the information.")
@@ -901,24 +917,36 @@
                     end
                     if textInput == nil or textInput == "" then return
                     else
-                        local isKilled = false
+                        local isUserFound = false
                         for _, pid in ipairs(playerList) do
                             local playerName = players.get_name(pid)
-                            if not players.is_in_interior(pid) then
-                                if playerName == textInput then
-                                    isKilled = true
+                            if playerName == textInput then
+                                isUserFound = true
+                                local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                                local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
+                                if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
+                                    if vehicleClass == 15 or vehicleClass == 16 then
+                                        menu.trigger_commands("vehkick"..players.get_name(pid))
+                                        TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
+                                        VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                                        VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                                        TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
+                                    end
+                                end
+                                if not players.is_in_interior(pid) then
                                     AerialFleetsNotify("Confirmed target player: "..textInput..".".."\nReady to target, roger that. Thanks for the information.")
                                     escort_attack(pid, modelVehicle, true)
                                     break
-                                end
-                            else
-                                AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army to do something.")
-                                for i = 1, 5 do
-                                    menu.trigger_commands("apt"..math.random(1, 114)..textInput)
+                                else
+                                    AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army do something.")
+                                    for i = 1, 5 do
+                                        menu.trigger_commands("apt"..math.random(1, 114)..textInput)
+                                    end
                                 end
                             end
                         end
-                        if not isKilled then
+                        if not isUserFound then
                             AerialFleetsNotify("Error STATUS: The US Air Force cannot recognize the user named "..textInput)
                         end
                     end
@@ -996,6 +1024,9 @@
                             if menu.get_value(ShowingMSGS) == true then chat.send_message(msgPresets, false, true, true) end
                             for _, pid in pairs(playerList) do
                                 if AvailableSession() then
+                                    local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                                    local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                                    local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
                                     if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
                                         escort_attack(pid, spawnerModel, true)
                                         util.yield(delaySpawningPresets * 1000)
@@ -1244,9 +1275,12 @@
             menu.trigger_commands("weather extrasunny")
         end, function()
             menu.trigger_commands("weather normal")
+            menu.trigger_commands("clouds normal")
         end)
 
-        clear_day = WeatherParts:toggle("Clear Day", {}, "", function(on) -- skid from aka
+        WeatherParts:action("Remove Clouds", {}, "", function() MISC.UNLOAD_ALL_CLOUD_HATS()end)
+
+        clear_day = WeatherParts:toggle("Clear Day", {}, "", function(on)
             util.yield()
             if on then
                 if menu.get_value(clear_night) then
@@ -1258,6 +1292,7 @@
                 menu.trigger_commands("clouds horizon")
             elseif not menu.get_value(clear_night) then
                 ResetRendering()
+                menu.trigger_commands("clouds normal")
             end
         end)
 
@@ -1273,6 +1308,7 @@
                 menu.trigger_commands("clouds horizon")
             elseif not menu.get_value(clear_day) then
                 ResetRendering()
+                menu.trigger_commands("clouds normal")
             end
         end)
 
@@ -1523,6 +1559,19 @@
                         if pid == players.user() then
                             AerialFleetsNotify("You cannot target yourself.")
                         else
+                            local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                            local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                            local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
+                            if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
+                                if vehicleClass == 15 or vehicleClass == 16 then
+                                    menu.trigger_commands("vehkick"..players.get_name(pid))
+                                    TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
+                                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                                    TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
+                                end
+                            end
+                            util.yield(1000)
                             if not players.is_in_interior(pid) then
                                 AerialFleetsNotify("Confirmed target player: "..AerialName..".".."\nReady to target, roger that. Thanks for the information.")
                                 escort_attack(pid, modelVehicleP, true)
