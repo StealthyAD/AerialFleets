@@ -944,7 +944,7 @@
                     return
                 end
                 if showingMsgs then
-                    local countdown = isSurfaceTF and 3 or delayCountdownTF
+                    local countdown = isSurfaceTF and delayCountdownTF
                     for i = countdown, 1, -1 do
                         AerialFleetsNotify("Ready in "..i.." seconds.")
                         util.yield(1000)
