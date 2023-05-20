@@ -70,8 +70,8 @@
         end
 
         local function escort_attack(pedUser, hash, surfaceVehicle)
-            local limitSpeed = 960.0
-            local speedVehicle = 440.0
+            local limitSpeed = 1280.0
+            local speedVehicle = 560.0
             if not players.is_in_interior(pedUser) then
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
@@ -316,6 +316,13 @@
             "FortunateSon",
             "PaintItBlack",
             "Paranoid",
+        }
+
+        local Songs = {
+            ["California Dreamin"] = "CaliforniaDreamin",
+            ["Fortunate Son"] = "FortunateSon",
+            ["Paint It Black"] = "PaintItBlack",
+            ["Paranoid"] = "Paranoid",
         }
 
         local randomMsgs = {
@@ -605,6 +612,28 @@
         CustomVehicleAdvanced = CustomVehicleTF:toggle_loop("Custom Vehicle", {}, "", function()end)
         ShowMessages = CustomVehicleTF:toggle_loop("Show Messages", {}, "", function()end)
         EnableMusics = CustomVehicleTF:toggle_loop("Toggle Musics", {}, "", function()end)
+
+        local Songs = {
+            ["California Dreamin"] = "CaliforniaDreamin",
+            ["Fortunate Son"] = "FortunateSon",
+            ["Paint It Black"] = "PaintItBlack",
+            ["Paranoid"] = "Paranoid",
+        }
+        
+        local musicName = {}
+        for name, _ in pairs(Songs) do
+            table.insert(musicName, name)
+        end
+
+        table.sort(musicName, function(a, b) return a[1] < b[1] end)
+        
+        local selectedMusic = "California Dreamin"
+        local songsName = Songs[selectedMusic]
+        CustomVehicleTF:list_select("Music List", {}, "", musicName, 1, function(index)
+            selectedMusic = musicName[index]
+            songsName = Songs[selectedMusic]
+        end)
+
         CustomVehicleTF:text_input("Send Message", {"aftaskforcemsg"}, "America has sent a friend request.", function(typeText)
             if typeText ~= "" then
                 specialMsg = typeText
@@ -673,8 +702,7 @@
                 chat.send_message(specialMsg, false, true, true)
             end
             if menu.get_value(EnableMusics) == true then
-                local randomSong = randomSongs[math.random(#randomSongs)]
-                FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
                 local randomMSG = randomMsgs[math.random(#randomMsgs)]
                 AerialFleetsNotify(randomMSG)
             end
@@ -717,8 +745,7 @@
                 chat.send_message(specialMsg, false, true, true)
             end
             if menu.get_value(EnableMusics) == true then
-                local randomSong = randomSongs[math.random(#randomSongs)]
-                FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
                 local randomMSG = randomMsgs[math.random(#randomMsgs)]
                 AerialFleetsNotify(randomMSG)
             end
@@ -911,6 +938,28 @@
         end, delayCountdownTF)
 
         ShowingMSGS = PresetSpawningTF:toggle_loop("Show Messages", {}, "", function()end)
+
+        local SongsPT = {
+            ["California Dreamin"] = "CaliforniaDreamin",
+            ["Fortunate Son"] = "FortunateSon",
+            ["Paint It Black"] = "PaintItBlack",
+            ["Paranoid"] = "Paranoid",
+        }
+        
+        local musicNamePRT = {}
+        for name, _ in pairs(SongsPT) do
+            table.insert(musicNamePRT, name)
+        end
+
+        table.sort(musicNamePRT, function(a, b) return a[1] < b[1] end)
+        
+        local selectedMusicPT = "California Dreamin"
+        local songsNamePT = SongsPT[selectedMusicPT]
+        PresetSpawningTF:list_select("Music List", {}, "", musicNamePRT, 1, function(index)
+            selectedMusicPT = musicNamePRT[index]
+            songsNamePT = SongsPT[selectedMusicPT]
+        end)
+
         EnableMusicsTF = PresetSpawningTF:toggle_loop("Toggle Musics", {}, "", function()end)
         CustomPresets = PresetSpawningTF:toggle_loop("Toggle Preset Vehicle", {}, "", function()end)
         ToggleSurfaceTF = PresetSpawningTF:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control.\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
@@ -952,8 +1001,7 @@
                     chat.send_message(msgPresets, false, true, true)
                 end
                 if menu.get_value(EnableMusicsTF) == true then
-                    local randomSong = randomSongs[math.random(#randomSongs)]
-                    FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                    FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
                     local randomMSG = randomMsgs[math.random(#randomMsgs)]
                     AerialFleetsNotify(randomMSG)
                 end
@@ -978,6 +1026,26 @@
             EnableDLCS = DLCs:toggle_loop("Custom Vehicles", {}, "", function()end)
         end
         ShowingMSGDLC = DLCs:toggle_loop("Show Messages", {}, "", function()end)
+        local DLCSongs = {
+            ["California Dreamin"] = "CaliforniaDreamin",
+            ["Fortunate Son"] = "FortunateSon",
+            ["Paint It Black"] = "PaintItBlack",
+            ["Paranoid"] = "Paranoid",
+        }
+        
+        local DLCNameMusics = {}
+        for name, _ in pairs(DLCSongs) do
+            table.insert(DLCNameMusics, name)
+        end
+
+        table.sort(DLCNameMusics, function(a, b) return a[1] < b[1] end)
+        
+        local selectedMusicDLCS = "California Dreamin"
+        local DLCSongsName = DLCSongs[selectedMusicDLCS]
+        DLCs:list_select("Music List", {}, "", DLCNameMusics, 1, function(index)
+            selectedMusicPT = DLCNameMusics[index]
+            DLCSongsName = DLCSongs[selectedMusicDLCS]
+        end)
         EnableMusicsDLC = DLCs:toggle_loop("Toggle Musics", {}, "", function()end)
         local delaySpawningDLC = 1
         DLCs:text_input("Delay Time", {"aftimertfdlc"}, "Do not abuse for spawning vehicle, do not go to lower for preventing for crash, mass entities.\n\nMeasured in seconds.", function(typeText)
@@ -1075,8 +1143,7 @@
                     chat.send_message(dlcMsgs, false, true, true) 
                 end
                 if menu.get_value(EnableMusicsDLC) == true then
-                    local randomSong = randomSongs[math.random(#randomSongs)]
-                    FleetSongs(join_path(songs, randomSong .. ".wav"), SND_FILENAME | SND_ASYNC)
+                    FleetSongs(join_path(songs, DLCSongsName .. ".wav"), SND_FILENAME | SND_ASYNC)
                     local randomMSG = randomMsgs[math.random(#randomMsgs)]
                     AerialFleetsNotify(randomMSG)
                 end
@@ -1451,16 +1518,6 @@
                 planesHashP = planeModelsP[selectedPlaneModel]
             end)
     
-            local planeModels2 = {
-                "molotok",
-                "rogue",
-                "pyro",
-                "nokota",
-                "starling",
-                "mogul",
-                "seabreeze",
-                "strikeforce",
-            }
             PartsPlayer:action("Send Air Force", {"afusaft"}, "Sending America to war and intervene more planes.\nWARNING: The action is irreversible in the session if toggle godmode on.\nNOTE: Toggle Exclude features.", function()
                 if AvailableSession() then
                     for _ = 1, menu.get_value(PlaneCountP) do
