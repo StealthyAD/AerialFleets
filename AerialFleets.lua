@@ -27,7 +27,7 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.93AG"
+        local SCRIPT_VERSION = "1.93LN"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -70,13 +70,13 @@
         end
 
         local function escort_attack(pedUser, hash, surfaceVehicle)
-            local limitSpeed = 1280.0
-            local speedVehicle = 800.0
+            local limitSpeed = 3200.0
+            local speedVehicle = 1300.0
             if not players.is_in_interior(pedUser) then
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and 600 or 150
+                local altitude = surfaceVehicle and 450 or 150
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
@@ -84,18 +84,33 @@
                 local offsetY = math.random(surfaceVehicle and -125 or -100, surfaceVehicle and 10 or -5)
                 local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(playerPed, offsetX, offsetY, playerPos.z)
                 local vehicle = entities.create_vehicle(vehicleHash, coords, ENTITY.GET_ENTITY_HEADING(playerPed))
-        
                 if not STREAMING.HAS_MODEL_LOADED(vehicle) then
                     request_model_load(vehicle)
                 end
                 for i = 0, 49 do
                     local num = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)
-                    VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
+                    if vehicleHash == util.joaat("rogue") or
+                       vehicleHash == util.joaat("pyro") or
+                       vehicleHash == util.joaat("nokota") or
+                       vehicleHash == util.joaat("strikeforce") or
+                       vehicleHash == util.joaat("molotok") or
+                       vehicleHash == util.joaat("hunter") or
+                       vehicleHash == util.joaat("starling") or
+                       vehicleHash == util.joaat("akula") then
+                        VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
+                    end
                 end
                 VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
                 VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, speedVehicle)
+                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speedVehicle)
+                VEHICLE.SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON(vehicle, false)
+                VEHICLE.SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON_SYNCED(vehicle, false)
                 VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, limitSpeed)
                 VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, 4)
+                VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
+                VEHICLE.SET_PLANE_TURBULENCE_MULTIPLIER(vehicle, 0.0)
+                VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
+                VEHICLE.SET_VEHICLE_WINDOW_TINT(vehicle, 1)
                 ENTITY.SET_ENTITY_INVINCIBLE(vehicle, true)
                 coords = ENTITY.GET_ENTITY_COORDS(playerPed, false)
                 coords.x = coords['x']
@@ -122,6 +137,7 @@
                 request_model_load(hash_model)
                 local attacker = entities.create_ped(28, hash_model, coords, math.random(0, 270))
                 PED.SET_PED_AS_COP(attacker, true)
+                PED.SET_DRIVER_AGGRESSIVENESS(attacker, 1.0)
                 PED.SET_PED_CONFIG_FLAG(attacker, 281, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 2, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 33, false)
@@ -129,10 +145,10 @@
                 PED.SET_PED_RANDOM_COMPONENT_VARIATION(attacker, 0)
                 PED.SET_PED_SHOOT_RATE(attacker, 5)
                 PED.SET_PED_ACCURACY(attacker, 100.0)
-                PED.SET_PED_COMBAT_ABILITY(attacker, 2, true)
                 PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
-                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, true)
+                PED.SET_PED_COMBAT_ABILITY(attacker, 2, false)
                 PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 5, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, false)
                 PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(attacker, true)
                 ENTITY.SET_ENTITY_INVINCIBLE(attacker, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 52, true)
@@ -141,16 +157,36 @@
                 PED.SET_PED_INTO_VEHICLE(attacker, vehicle, -1)
                 PED.CREATE_PED_INSIDE_VEHICLE(attacker, vehicle, 28, hash_model, -1, true)
                 ENTITY.SET_ENTITY_AS_MISSION_ENTITY(attacker, true, true)
-                TASK.TASK_VEHICLE_MISSION_PED_TARGET(attacker, vehicle, ped, 6, 500.0, 786988, 0.0, 0.0, true)
+                local playerEnemy = players.get_position(pedUser)
+                playerEnemy.z = playerEnemy.z + altitude
+                if VEHICLE.IS_THIS_MODEL_A_HELI(vehicleHash) then
+                    TASK.TASK_HELI_CHASE(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
+                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(ped, true)
+                    if PED.IS_PED_IN_VEHICLE(ped, playerVehicle, false) then
+                        TASK.TASK_HELI_MISSION(attacker, vehicle, playerVehicle, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z, 6, 300, 100.0, 0, -1, 0.0, 0.0, true)
+                    else
+                        TASK.TASK_HELI_MISSION(attacker, vehicle, 0, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z, 6, 300, 100.0, 0, -1, 0.0, 0.0, true)
+                    end
+                    VEHICLE.SET_HELI_BLADES_FULL_SPEED(vehicle)
+                    VEHICLE.SET_HELI_BLADES_SPEED(vehicle, 1.0)
+                    VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
+                    VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
+                else
+                    TASK.TASK_VEHICLE_MISSION_PED_TARGET(attacker, vehicle, ped, 6, 500.0, 786988, 0.0, 0.0, true)
+                    TASK.TASK_PLANE_CHASE(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
+                    local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(ped, true)
+                    if PED.IS_PED_IN_VEHICLE(ped, playerVehicle, false) then
+                        TASK.TASK_PLANE_MISSION(attacker, vehicle, playerVehicle, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z, 6, 100.0, -1.0, 0, 100, 0.0, 0.0, true)
+                    else
+                        TASK.TASK_PLANE_MISSION(attacker, vehicle, 0, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z, 6, 100.0, -1.0, 0, 100, 0.0, 0.0, true)
+                    end
+                    VEHICLE.SET_HELI_BLADES_FULL_SPEED(vehicle)
+                    VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
+                    VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
+                end
                 TASK.TASK_VEHICLE_CHASE(attacker, ped)
-                PED.SET_PED_ACCURACY(attacker, 100.0)
-                PED.SET_PED_COMBAT_ABILITY(attacker, 2, true)
-                PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
-                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, true)
-                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 5, true)
+                TASK.SET_DRIVE_TASK_DRIVING_STYLE(attacker, 2883621)
                 PED.SET_PED_CAN_BE_KNOCKED_OFF_VEHICLE(attacker, 1)
-                PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(ped, true)
-                PED.SET_PED_CONFIG_FLAG(attacker, 52, true)
             end
         end
 
@@ -186,6 +222,8 @@
                     VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, 320.0)
                     VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, 1000.0)
                     VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, 4)
+                    VEHICLE.SET_HELI_BLADES_FULL_SPEED(vehicle)
+                    VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
                     ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(PlaneToggleGod))
                     coords = ENTITY.GET_ENTITY_COORDS(ped, false)
                     coords.x = coords['x']
@@ -736,7 +774,7 @@
                 else
                     AerialFleetsNotify("I'm sorry, you cannot target "..playerName.." while staying on the base. But I have an idea to force. Let's US Army do something.")
                     for i = 1, 5 do
-                        menu.trigger_commands("apt"..math.random(1, 114)..playerName)
+                        menu.trigger_commands("interiorkick"..playerName)
                     end
                 end
             else
@@ -768,7 +806,7 @@
                         else
                             AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army do something.")
                             for i = 1, 5 do
-                                menu.trigger_commands("apt"..math.random(1, 114)..textInput)
+                                menu.trigger_commands("interiorkick"..textInput)
                             end
                         end
                     end
@@ -908,6 +946,76 @@
                     end
                     chat.send_message(msgPresets, false, true, true)
                 end                            
+                if menu.get_value(EnableMusicsTF) == true then
+                    FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
+                    local randomMSG = randomMsgs[math.random(#randomMsgs)]
+                    AerialFleetsNotify(randomMSG)
+                end
+                for _, pid in pairs(playerList) do
+                    if AvailableSession() then
+                        if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                            escort_attack(pid, spawnerModel, isSurfaceTF)
+                            util.yield(delaySpawningPresets * 1000)
+                        end
+                    end
+                end
+            end)
+        end
+
+        PresetSpawningTF:divider("Helicopters")
+
+        local heliTables = {
+            ["FH-1 Hunter"] = "hunter",
+            ["Savage"] = "savage",
+            ["Buzzard Attack Chopper"] = "buzzard",
+            ["RF-1 Akula"] = "akula"
+        }
+        
+        local heliSpawner = {}
+        for heliTypeSpawn, spawnerModelH in pairs(heliTables) do
+            table.insert(heliSpawner, {heliTypeSpawn, spawnerModelH})
+        end
+        
+        table.sort(heliSpawner, function(a, b)
+            return a[1] < b[1]
+        end)
+        
+        for _, spawner in ipairs(heliSpawner) do
+            local spawnerName = spawner[1]
+            local spawnerModel = spawner[2]
+            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask" .. spawnerModel}, "", function()
+                local player = PLAYER.PLAYER_PED_ID()
+                local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
+                local isSurfaceTF = menu.get_value(ToggleSurfaceTF) == true
+                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
+                local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+                local showingMsgs = menu.get_value(ShowingMSGS) == true
+                if menu.get_value(CustomPresets) == true then
+                    if isSurfaceTF then
+                        if vehicleClass ~= 19 then
+                            AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
+                            return
+                        end
+                    elseif not PED.IS_PED_IN_ANY_PLANE(player) then
+                        AerialFleetsNotify("To operate the action, you need to be in a plane.")
+                        return
+                    end
+                else
+                    AerialFleetsNotify("Please enable \"Toggle Preset Vehicle\" to work for " .. spawnerName)
+                    return
+                end
+                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
+                    AerialFleetsNotify("Please sit down in a vehicle.")
+                    return
+                end
+                if showingMsgs then
+                    local countdown = isSurfaceTF and delayCountdownTF or delayCountdownTF
+                    for i = countdown, 1, -1 do
+                        AerialFleetsNotify("Ready in " .. i .. " seconds.")
+                        util.yield(1000)
+                    end
+                    chat.send_message(msgPresets, false, true, true)
+                end
                 if menu.get_value(EnableMusicsTF) == true then
                     FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
                     local randomMSG = randomMsgs[math.random(#randomMsgs)]
@@ -1485,7 +1593,7 @@
                 else
                     AerialFleetsNotify("I'm sorry, you cannot target "..AerialName.." while sitting on the base. But I have an idea to force. Let's US Army do something.")
                     for i = 1, 5 do
-                        menu.trigger_commands("apt"..math.random(1, 114)..AerialName)
+                        menu.trigger_commands("interiorkick"..AerialName)
                     end
                 end
             end)
