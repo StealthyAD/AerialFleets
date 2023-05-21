@@ -27,7 +27,7 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.93"
+        local SCRIPT_VERSION = "1.93AG"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -478,7 +478,7 @@
             for _, pid in pairs(playerList) do
                 if AvailableSession() and not players.is_in_interior(pid) then
                     for _ = 1, menu.get_value(PlaneCount) do
-                        harass_vehicle(pid, planesHash, true, false)
+                        harass_vehicle(pid, planesHash, true)
                         util.yield(delay)
                     end
                 end
@@ -901,7 +901,7 @@
                     return
                 end
                 if showingMsgs then
-                    local countdown = (isSurfaceTF and delayCountdownTF) and 3 or delayCountdownTF
+                    local countdown = isSurfaceTF and delayCountdownTF or delayCountdownTF
                     for i = countdown, 1, -1 do
                         AerialFleetsNotify("Ready in "..i.." seconds.")
                         util.yield(1000)
@@ -1429,7 +1429,7 @@
             PartsPlayer:action("Send Air Force", {"afusaft"}, "Sending America to war and intervene more planes.\nWARNING: The action is irreversible in the session if toggle godmode on.\nNOTE: Toggle Exclude features.", function()
                 if AvailableSession() then
                     for _ = 1, menu.get_value(PlaneCountP) do
-                        harass_vehicle(pid, planesHashP, true, false)
+                        harass_vehicle(pid, planesHashP, true)
                         util.yield(delaySpawningPlayer * 1000)
                     end
                 end
