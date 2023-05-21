@@ -71,12 +71,12 @@
 
         local function escort_attack(pedUser, hash, surfaceVehicle)
             local limitSpeed = 1280.0
-            local speedVehicle = 560.0
+            local speedVehicle = 800.0
             if not players.is_in_interior(pedUser) then
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and 550 or 100
+                local altitude = surfaceVehicle and 600 or 150
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
@@ -166,7 +166,7 @@
             end
         end
 
-        local function harass_vehicle(pedUser, vehicleHash, aerialCar, heliCars)
+        local function harass_vehicle(pedUser, vehicleHash, aerialCar)
             if aerialCar then
                 if not players.is_in_interior(pedUser) then
                     local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
@@ -223,84 +223,6 @@
                     PED.SET_PED_RELATIONSHIP_GROUP_HASH(attacker, relHash)
                 end
             end
-
-            if heliCars then
-                if not players.is_in_interior(pedUser) then
-                    local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                    local marine1 = util.joaat("s_m_y_marine_01")
-                    local marine2 = util.joaat("s_m_y_marine_03")
-                    local hash = util.joaat(vehicleHash)
-                    request_model_load(hash)
-                    request_model_load(marine1)
-                    request_model_load(marine2)
-                    local altitude = 75
-                    local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(ped, 0.0, 15.0, altitude)
-                    local vehicle = entities.create_vehicle(hash, coords, ENTITY.GET_ENTITY_HEADING(ped))
-                    if not STREAMING.HAS_MODEL_LOADED(vehicle) then
-                        request_model_load(vehicle)
-                    end
-                    if not ENTITY.DOES_ENTITY_EXIST(vehicle) then
-                        return
-                    end
-                    local outCoords = v3.new()
-                
-                    for i=-1, VEHICLE.GET_VEHICLE_MAX_NUMBER_OF_PASSENGERS(vehicle) - 1 do
-                        local attackerFlag = entities.create_ped(2, marine1, outCoords, CAM.GET_GAMEPLAY_CAM_ROT(0).z)
-                        PED.SET_PED_INTO_VEHICLE(attackerFlag, vehicle, i)
-                        if i % 2 == 0 then
-                            WEAPON.GIVE_WEAPON_TO_PED(attackerFlag, 584646201 , 9999, false, true)
-                            PED.SET_PED_FIRING_PATTERN(attackerFlag, -957453492)
-                        else
-                            WEAPON.GIVE_WEAPON_TO_PED(attackerFlag, 584646201 , 9999, false, true)
-                            PED.SET_PED_FIRING_PATTERN(attackerFlag, -957453492)
-                        end
-                        ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(HelisToggleGod))
-                        PED.SET_PED_AS_COP(attackerFlag, true)
-                        PED.SET_PED_CONFIG_FLAG(attackerFlag, 281, true)
-                        PED.SET_PED_CONFIG_FLAG(attackerFlag, 2, true)
-                        PED.SET_PED_CONFIG_FLAG(attackerFlag, 33, false)
-                        PED.SET_PED_COMBAT_ATTRIBUTES(attackerFlag, 5, true)
-                        PED.SET_PED_COMBAT_ATTRIBUTES(attackerFlag, 46, true)
-                        PED.SET_PED_ACCURACY(attackerFlag, 100.0)
-                        PED.SET_PED_HEARING_RANGE(attackerFlag, 99999)
-                        PED.SET_PED_RANDOM_COMPONENT_VARIATION(attackerFlag, 0)
-                        VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
-                        VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, 120.0)
-                        VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, 1000.0)
-                        VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, 4)
-                        VEHICLE.SET_VEHICLE_EXPLODES_ON_HIGH_EXPLOSION_DAMAGE(vehicle, false)
-                        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, 300)
-                        PED.SET_PED_MAX_HEALTH(attackerFlag, 150)
-                        ENTITY.SET_ENTITY_PROOFS(ped, false, true, false, false, true, false, false, false)
-                        ENTITY.SET_ENTITY_HEALTH(attackerFlag, 150)
-                        PED.SET_PED_ARMOUR(attackerFlag, 100)
-                        PED.SET_PED_SHOOT_RATE(attackerFlag, 5)
-                        VEHICLE.SET_VEHICLE_MOD_KIT(vehicle, 0)
-                        VEHICLE.SET_VEHICLE_COLOURS(vehicle, 154, 154)
-                        VEHICLE.SET_VEHICLE_MOD_COLOR_1(vehicle, 3, 154, 0) --matte finish
-                        VEHICLE.SET_VEHICLE_MOD_COLOR_2(vehicle, 3, 154, 0)-- matte secondary
-                        PED.SET_PED_SUFFERS_CRITICAL_HITS(attackerFlag, false)
-                        VEHICLE.SET_VEHICLE_MOD(vehicle, 10, 0) --rear turret
-                        VEHICLE.SET_VEHICLE_EXTRA_COLOURS(vehicle, 0, 154) --wheel color
-                        VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT_INDEX(vehicle, 4) --plate type, 4 is SA EXEMPT which law enforcement and government vehicles use
-                        PED.SET_PED_COMBAT_ATTRIBUTES(attackerFlag, 3, false)
-                        ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(HelisToggleGod))
-                        if i == -1 then
-                            TASK.TASK_VEHICLE_CHASE(attackerFlag, ped)
-                            WEAPON.GIVE_WEAPON_TO_PED(attackerFlag, 584646201 , 1000, false, true)
-                        else
-                            TASK.TASK_COMBAT_PED(attackerFlag, ped, 0, 16)
-                            WEAPON.GIVE_WEAPON_TO_PED(attackerFlag, 4208062921, 9999, false, true)
-                            WEAPON.GIVE_WEAPON_COMPONENT_TO_PED(attackerFlag, 4208062921, 0x8B3C480B)
-                            WEAPON.GIVE_WEAPON_COMPONENT_TO_PED(attackerFlag, 4208062921, 0x4DB62ABE)
-                            WEAPON.GIVE_WEAPON_COMPONENT_TO_PED(attackerFlag, 4208062921, 0x5DD5DBD5)
-                            WEAPON.GIVE_WEAPON_COMPONENT_TO_PED(attackerFlag, 4208062921, 0x9D65907A)
-                            WEAPON.GIVE_WEAPON_COMPONENT_TO_PED(attackerFlag, 4208062921, 0x420FD713)
-                            PED.SET_PED_FIRING_PATTERN(attackerFlag, -957453492)
-                        end
-                    end
-                end
-            end
         end
 
         local function ResetRendering()
@@ -310,20 +232,6 @@
                 menu.trigger_commands("syncclock")
             end
         end
-
-        local randomSongs = {
-            "CaliforniaDreamin",
-            "FortunateSon",
-            "PaintItBlack",
-            "Paranoid",
-        }
-
-        local Songs = {
-            ["California Dreamin"] = "CaliforniaDreamin",
-            ["Fortunate Son"] = "FortunateSon",
-            ["Paint It Black"] = "PaintItBlack",
-            ["Paranoid"] = "Paranoid",
-        }
 
         local randomMsgs = {
             "Smell like Vietnam but we are crazy",
@@ -922,18 +830,18 @@
             end
         end, msgPresets)
 
-        local delayCountdownTF = 2
+        local delayCountdownTF = 3
         PresetSpawningTF:text_input("Delay Countdown", {"aftimerprcount"}, "Countdown for notification.\nMeasured in seconds.", function(typeText)
             if typeText ~= "" then
                 local delay = tonumber(typeText)
-                if delay and delay > 1 then
+                if delay and delay > 2 then
                     delayCountdownTF = delay
                 else
                     AerialFleetsNotify("Invalid delay value. Please enter a positive number greater than 1.")
-                    delayCountdownTF = 2
+                    delayCountdownTF = 3
                 end
             else
-                delayCountdownTF = 2
+                delayCountdownTF = 3
             end
         end, delayCountdownTF)
 
@@ -993,13 +901,13 @@
                     return
                 end
                 if showingMsgs then
-                    local countdown = isSurfaceTF and delayCountdownTF
+                    local countdown = (isSurfaceTF and delayCountdownTF) and 3 or delayCountdownTF
                     for i = countdown, 1, -1 do
                         AerialFleetsNotify("Ready in "..i.." seconds.")
                         util.yield(1000)
                     end
                     chat.send_message(msgPresets, false, true, true)
-                end
+                end                            
                 if menu.get_value(EnableMusicsTF) == true then
                     FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
                     local randomMSG = randomMsgs[math.random(#randomMsgs)]
