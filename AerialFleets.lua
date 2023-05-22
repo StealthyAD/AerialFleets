@@ -68,6 +68,28 @@
                 util.yield()
             end
         end
+        -- Ped Tables
+        local ped_models = {
+            util.joaat("s_m_y_blackops_01"),
+            util.joaat("s_m_m_marine_01"),
+            util.joaat("s_m_m_pilot_02"),
+            util.joaat("s_m_y_pilot_01"),
+            util.joaat("s_m_m_marine_02"),
+            util.joaat("s_m_m_prisguard_01"),
+            util.joaat("mp_g_m_pros_01"),
+            util.joaat("mp_m_avongoon"),
+            util.joaat("mp_m_boatstaff_01"),
+            util.joaat("mp_m_bogdangoon"),
+            util.joaat("mp_m_claude_01"),
+            util.joaat("mp_m_cocaine_01"),
+            util.joaat("mp_m_counterfeit_01"),
+            util.joaat("mp_m_exarmy_01"),
+            util.joaat("mp_m_fibsec_01"),
+            util.joaat("s_m_m_ciasec_01"),
+            util.joaat("s_m_m_cntrybar_0"),
+            util.joaat("s_m_y_clown_01"),
+            util.joaat("s_m_y_swat_01"),
+        }
 
         local function escort_attack(pedUser, hash, surfaceVehicle)
             local limitSpeed = 3200.0
@@ -76,7 +98,7 @@
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and 450 or 150
+                local altitude = surfaceVehicle and 450 or 65
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
@@ -116,24 +138,7 @@
                 coords.x = coords['x']
                 coords.y = coords['y']
                 coords.z = coords['z']
-                local hash_models = {
-                    util.joaat("s_m_y_blackops_01"),
-                    util.joaat("s_m_m_marine_01"),
-                    util.joaat("s_m_m_pilot_02"),
-                    util.joaat("s_m_y_pilot_01"),
-                    util.joaat("s_m_m_marine_02"),
-                    util.joaat("s_m_m_prisguard_01"),
-                    util.joaat("mp_g_m_pros_01"),
-                    util.joaat("mp_m_avongoon"),
-                    util.joaat("mp_m_boatstaff_01"),
-                    util.joaat("mp_m_bogdangoon"),
-                    util.joaat("mp_m_claude_01"),
-                    util.joaat("mp_m_cocaine_01"),
-                    util.joaat("mp_m_counterfeit_01"),
-                    util.joaat("mp_m_exarmy_01"),
-                    util.joaat("mp_m_fibsec_01")
-                }
-                local hash_model = hash_models[math.random(#hash_models)]
+                local hash_model = ped_models[math.random(#ped_models)]
                 request_model_load(hash_model)
                 local attacker = entities.create_ped(28, hash_model, coords, math.random(0, 270))
                 PED.SET_PED_AS_COP(attacker, true)
@@ -184,9 +189,13 @@
                     VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
                     VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
                 end
+                TASK.SET_DRIVE_TASK_CRUISE_SPEED(attacker, speedVehicle)
+                TASK.SET_DRIVE_TASK_MAX_CRUISE_SPEED(attacker, limitSpeed)
                 TASK.TASK_VEHICLE_CHASE(attacker, ped)
                 TASK.SET_DRIVE_TASK_DRIVING_STYLE(attacker, 2883621)
                 PED.SET_PED_CAN_BE_KNOCKED_OFF_VEHICLE(attacker, 1)
+                PED.SET_PED_SEEING_RANGE(attacker, 99999.0)
+                PED.SET_PED_HEARING_RANGE(attacker, 99999.0)
             end
         end
 
@@ -626,7 +635,7 @@
             local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
             if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
             local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
-            if vehicleClass ~= 19 then AerialFleetsNotify("To operate the action, you need to be in a military vehicle.") return end
+            if vehicleClass < 0 or (vehicleClass > 14 and vehicleClass < 17) or vehicleClass > 21 then AerialFleetsNotify("To operate the action, you need to be in a ground vehicle.") return end
             local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
             local textInput = display_onscreen_keyboard()
             if textInput == "" or textInput == nil then return end
@@ -739,7 +748,7 @@
             local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
             if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("To operate the action, you need to be in a vehicle.") return end
             local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(playerVehicle)
-            if isSurfaceTask then if vehicleClass ~= 19 then AerialFleetsNotify("To operate the action, you need to be in a military vehicle.") return end
+            if isSurfaceTask then if vehicleClass < 0 or (vehicleClass > 14 and vehicleClass < 17) or vehicleClass > 21 then AerialFleetsNotify("To operate the action, you need to be in a valid ground vehicle.") return end
             else
                 if not (PED.IS_PED_IN_ANY_PLANE(player) or PED.IS_PED_IN_ANY_HELI(player)) then
                     AerialFleetsNotify("To operate the action, you need to be in a plane or helicopter.")
@@ -922,8 +931,8 @@
                 local showingMsgs = menu.get_value(ShowingMSGS) == true
                 if menu.get_value(CustomPresets) == true then
                     if isSurfaceTF then
-                        if vehicleClass ~= 19 then
-                            AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
+                        if vehicleClass < 0 or (vehicleClass > 14 and vehicleClass < 17) or vehicleClass > 21 then
+                            AerialFleetsNotify("To operate the action, you need to be in a ground vehicle.")
                             return
                         end
                     elseif not PED.IS_PED_IN_ANY_PLANE(player) then
@@ -992,8 +1001,8 @@
                 local showingMsgs = menu.get_value(ShowingMSGS) == true
                 if menu.get_value(CustomPresets) == true then
                     if isSurfaceTF then
-                        if vehicleClass ~= 19 then
-                            AerialFleetsNotify("To operate the action, you need to be in a military vehicle.")
+                        if vehicleClass < 0 or (vehicleClass > 14 and vehicleClass < 17) or vehicleClass > 21 then
+                            AerialFleetsNotify("To operate the action, you need to be in a ground vehicle.")
                             return
                         end
                     elseif not PED.IS_PED_IN_ANY_PLANE(player) then
@@ -1078,7 +1087,7 @@
             end
         end, delaySpawningDLC)
 
-        DLCs:hyperlink("Download Required files", "https://bit.ly/3OmUGGF", "Do not use presets vehicles while not downloading required files.\nTo know how to drag: Stand/Custom DLCs and load.")
+        DLCs:hyperlink("Download Required files", "https://bit.ly/3WxIlli", "Do not use presets vehicles while not downloading required files.\nTo know how to drag: Stand/Custom DLCs and load.")
         local dlcMsgs = "US Air Force has sent a friend request."
         DLCs:text_input("Send Message", {"aftaskforcemsgdlc"}, "America has sent a friend request.", function(typeText)
             if typeText ~= "" then
@@ -1110,6 +1119,8 @@
             ["Lockheed Martin F-16C Fighting Falcon"] = "f16c",
             ["Lockheed Martin F-22A Raptor"] = "f22a",
             ["Lockheed Martin F-35C Lightning II"] = "f35c",
+            ["General Atomics MQ-9 Reaper"] = "mq9",
+            ["General Atomics MQ-1 Predator"] = "mq1",
         }
 
         local tempSpawnersDLC = {}
@@ -1578,7 +1589,6 @@
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
                 local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                if not PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then return end
                 if vehicleClass == 15 or vehicleClass == 16 then
                     menu.trigger_commands("vehkick"..players.get_name(pid))
                     TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
@@ -1586,7 +1596,7 @@
                     VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
                     TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
                 end
-                util.yield(1000)
+                util.yield(250)
                 if not players.is_in_interior(pid) then
                     AerialFleetsNotify("Confirmed target player: "..AerialName..".".."\nReady to target, roger that. Thanks for the information.")
                     escort_attack(pid, modelVehicleP, false)
