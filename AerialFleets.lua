@@ -27,7 +27,7 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.93LN"
+        local SCRIPT_VERSION = "1.94"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -68,6 +68,19 @@
                 util.yield()
             end
         end
+
+        local function request_control_entity(ent, time)
+            if ent and ent ~= 0 then
+                local end_time = os.clock() + (time or 3)
+                while not NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(ent) and os.clock() < end_time do
+                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(ent)
+                    util.yield()
+                end
+                return NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(ent)
+            end
+            return false
+        end
+
         -- Ped Tables
         local ped_models = {
             util.joaat("s_m_y_blackops_01"),
@@ -98,11 +111,11 @@
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and 450 or 65
+                local altitude = surfaceVehicle and math.random(400, 800) or math.random(75, 200)
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
-                local offsetX = math.random(-55, 55)
+                local offsetX = math.random(-100, 100)
                 local offsetY = math.random(surfaceVehicle and -125 or -100, surfaceVehicle and 10 or -5)
                 local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(playerPed, offsetX, offsetY, playerPos.z)
                 local vehicle = entities.create_vehicle(vehicleHash, coords, ENTITY.GET_ENTITY_HEADING(playerPed))
@@ -112,19 +125,19 @@
                 for i = 0, 49 do
                     local num = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)
                     if vehicleHash == util.joaat("rogue") or
-                       vehicleHash == util.joaat("pyro") or
-                       vehicleHash == util.joaat("nokota") or
-                       vehicleHash == util.joaat("strikeforce") or
-                       vehicleHash == util.joaat("molotok") or
-                       vehicleHash == util.joaat("hunter") or
-                       vehicleHash == util.joaat("starling") or
-                       vehicleHash == util.joaat("akula") then
+                        vehicleHash == util.joaat("pyro") or
+                        vehicleHash == util.joaat("nokota") or
+                        vehicleHash == util.joaat("strikeforce") or
+                        vehicleHash == util.joaat("molotok") or
+                        vehicleHash == util.joaat("hunter") or
+                        vehicleHash == util.joaat("starling") or
+                        vehicleHash == util.joaat("akula") then
                         VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
                     end
                 end
                 VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
                 VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, speedVehicle)
-                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speedVehicle)
+                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, 100) -- multiplier speed
                 VEHICLE.SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON(vehicle, false)
                 VEHICLE.SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON_SYNCED(vehicle, false)
                 VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, limitSpeed)
@@ -146,14 +159,21 @@
                 PED.SET_PED_CONFIG_FLAG(attacker, 281, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 2, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 33, false)
-                PED.SET_PED_HEARING_RANGE(attacker, 99999)
                 PED.SET_PED_RANDOM_COMPONENT_VARIATION(attacker, 0)
                 PED.SET_PED_SHOOT_RATE(attacker, 5)
                 PED.SET_PED_ACCURACY(attacker, 100.0)
+                WEAPON.GIVE_DELAYED_WEAPON_TO_PED(attacker, 0x5EF9FEC4, 1, 1)
                 PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
-                PED.SET_PED_COMBAT_ABILITY(attacker, 2, false)
+                PED.SET_PED_COMBAT_ABILITY(attacker, 2)
+                PED.SET_PED_COMBAT_RANGE(attacker, 3)
                 PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 5, true)
                 PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, false)
+                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 1, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 3, false)
+                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 2, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 52, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 4, true)
+                PED.SET_PED_COMBAT_MOVEMENT(attacker, 2)
                 PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(attacker, true)
                 ENTITY.SET_ENTITY_INVINCIBLE(attacker, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 52, true)
@@ -1231,90 +1251,77 @@
         end)
 
         Detections:divider("Removal Parts")
-        Detections:toggle_loop("Remove All Planes", {}, "Let me do with the US Air Force to put them on the ground, all will be put on the ground well slept.\n\nWarning: you can be might karma.", function()
+        NetworkPart = Detections:toggle_loop("Control Request", {}, "Reduces the level of risk of being detected by modders.\nDisabling the option will increase your risk of being detected by modders, but the advantage remains the forcing kick of the powerful vehicle.", function()end)
+        Detections:toggle_loop("Remove All Aerial Vehicles", {}, "Let me do with the US Air Force to put them on the ground, all will be put on the ground well slept.", function()
             for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
                 if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                    if vehicleClass == 16 then
-                        menu.trigger_commands("vehkick"..players.get_name(pid))
-                        TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
-                        VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                        VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                        TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                        TASK.TASK_EVERYONE_LEAVE_VEHICLE(vehicle)
-                    end
-                end
-            end
-        end)
-
-        Detections:toggle_loop("Remove All Helicopters", {}, "Let me do with the US Air Force to put them on the ground, all will be put on the ground well slept.\n\nWarning: you can be might karma.", function()
-            for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
-                local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                    if vehicleClass == 15 then
-                        menu.trigger_commands("vehkick"..players.get_name(pid))
-                        TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
-                        VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                        VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                        TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                        TASK.TASK_EVERYONE_LEAVE_VEHICLE(vehicle)
-                    end
-                end
-            end
-        end)
-
-        Detections:toggle_loop("Remove All Vehicles", {}, "Let me do with the US Army and the America to put them on the ground, all will be put on the ground well slept.\n\nWarning: you can be might karma.\nDangerous part and more aggressive.", function()
-            for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
-                local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
-                if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                    for class = 0, 21 do
-                        if vehicleClass == class then
+                    if PED.IS_PED_IN_ANY_PLANE(playerPed) or PED.IS_PED_IN_ANY_HELI(playerPed) then
+                        if menu.get_value(NetworkPart) == true then
+                            request_control_entity(vehicle)
+                        else
                             menu.trigger_commands("vehkick"..players.get_name(pid))
-                            TASK.TASK_LEAVE_VEHICLE(playerPed, vehicle, math.random(0, 1))
-                            VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                            VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                            TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
-                            TASK.TASK_EVERYONE_LEAVE_VEHICLE(vehicle)
                         end
+                        TASK.CLEAR_PED_TASKS_IMMEDIATELY(playerPed)
+                        TASK.TASK_LEAVE_VEHICLE(pid, vehicle, math.random(0, 1))
+                        VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                        VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                        VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, false, true, true)
+                        VEHICLE.SET_VEHICLE_ENGINE_HEALTH(vehicle, -4000)
+                        VEHICLE.SET_VEHICLE_BODY_HEALTH(vehicle, -4000)
+                        VEHICLE.SET_VEHICLE_PETROL_TANK_HEALTH(vehicle, -4000)
+                        VEHICLE.SET_VEHICLE_UNDRIVEABLE(vehicle, true)
+                        TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
+                        TASK.TASK_EVERYONE_LEAVE_VEHICLE(vehicle)
                     end
                 end
             end
         end)
 
-        Detections:toggle_loop("Lock All Vehicles", {}, "Let me do with the US Army and the America to lock them and never exit.\n\nDangerous part and more aggressive.", function()
+        Detections:toggle_loop("Remove All Vehicles", {}, "Let me do with the US Army and the America to put them on the ground, all will be put on the ground well slept.\n\nWarning: Dangerous part and more aggressive.", function()
             for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
                 if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                    for class = 0, 21 do
-                        if vehicleClass == class then
-                            NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
-                            VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
-                            VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
-                        end
+                    if menu.get_value(NetworkPart) == true then
+                        request_control_entity(vehicle)
+                    else
+                        menu.trigger_commands("vehkick"..players.get_name(pid))
                     end
+                    TASK.CLEAR_PED_TASKS_IMMEDIATELY(playerPed)
+                    TASK.TASK_LEAVE_VEHICLE(playerPed, vehicle, math.random(0, 1))
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                    VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, false, true, true)
+                    VEHICLE.SET_VEHICLE_ENGINE_HEALTH(vehicle, -4000)
+                    VEHICLE.SET_VEHICLE_BODY_HEALTH(vehicle, -4000)
+                    VEHICLE.SET_VEHICLE_PETROL_TANK_HEALTH(vehicle, -4000)
+                    VEHICLE.SET_VEHICLE_UNDRIVEABLE(vehicle, true)
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
+                    TASK.TASK_LEAVE_ANY_VEHICLE(playerPed, 0, 0)
+                    TASK.TASK_EVERYONE_LEAVE_VEHICLE(vehicle)
+                end
+            end
+        end)
+
+        Detections:toggle_loop("Lock All Vehicles", {}, "Let me do with the US Army and the America to lock them and never exit.", function()
+            for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
+                local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
+                if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
+                    request_control_entity(vehicle)
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, true)
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 4)
                 end
             end
         end, function()
             for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
-                local vehicleClass = VEHICLE.GET_VEHICLE_CLASS(vehicle)
                 if PED.IS_PED_IN_VEHICLE(playerPed, vehicle, false) then
-                    for class = 0, 21 do
-                        if vehicleClass == class then
-                            NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
-                            VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, false)
-                            VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 0)
-                        end
-                    end
+                    request_control_entity(vehicle)
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(vehicle, false)
+                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(playerPed, 0)
                 end
             end
         end)
@@ -1602,7 +1609,7 @@
                     escort_attack(pid, modelVehicleP, false)
                 else
                     AerialFleetsNotify("I'm sorry, you cannot target "..AerialName.." while sitting on the base. But I have an idea to force. Let's US Army do something.")
-                    for i = 1, 5 do
+                    for _ = 1, 5 do
                         menu.trigger_commands("interiorkick"..AerialName)
                     end
                 end
