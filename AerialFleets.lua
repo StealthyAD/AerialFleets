@@ -45,7 +45,7 @@
             filesystem.mkdirs(script_resources)
         end
 
-        local songs = script_resources .. "/Songs" -- Redirects to %appdata%\Stand\Lua Scripts\resources\AerialFleets\Songs
+        local songs = filesystem.store_dir() .. "/music_stand" -- Redirects to %appdata%\Stand\Lua Scripts\store\music_stand
         if not filesystem.is_dir(songs) then
             filesystem.mkdirs(songs)
         end
@@ -56,7 +56,7 @@
     ----========================================----
 
         local function request_model_load(hash)
-            request_time = os.time()
+            local request_time = os.time()
             if not STREAMING.IS_MODEL_VALID(hash) then
                 return
             end
@@ -413,26 +413,38 @@
                 },
                 {
                     name="California Dreamin",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/CaliforniaDreamin.wav",
-                    script_relpath="resources/AerialFleets/Songs/CaliforniaDreamin.wav",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/CaliforniaDreamin.wav",
+                    script_relpath="store/music_stand/CaliforniaDreamin.wav",
                     check_interval=default_check_interval,
                 },
                 {
                     name="Paint It Black",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/PaintItBlack.wav",
-                    script_relpath="resources/AerialFleets/Songs/PaintItBlack.wav",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/PaintItBlack.wav",
+                    script_relpath="store/music_stand/PaintItBlack.wav",
                     check_interval=default_check_interval,
                 },
                 {
                     name="Fortunate Son",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/FortunateSon.wav",
-                    script_relpath="resources/AerialFleets/Songs/FortunateSon.wav",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/FortunateSon.wav",
+                    script_relpath="store/music_stand/FortunateSon.wav",
                     check_interval=default_check_interval,
                 },
                 {
                     name="Paranoid",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/resources/AerialFleets/Songs/Paranoid.wav",
-                    script_relpath="resources/AerialFleets/Songs/Paranoid.wav",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/Paranoid.wav",
+                    script_relpath="store/music_stand/Paranoid.wav",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="Danger Zone",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/DangerZone.wav",
+                    script_relpath="store/music_stand/DangerZone.wav",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="Everybody Wants to Rule the World",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/RuleTheWorld.wav",
+                    script_relpath="store/music_stand/RuleTheWorld.wav",
                     check_interval=default_check_interval,
                 },
             }
@@ -593,6 +605,8 @@
             ["Fortunate Son"] = "FortunateSon",
             ["Paint It Black"] = "PaintItBlack",
             ["Paranoid"] = "Paranoid",
+            ["Everybody Wants to Rule the World"] = "RuleTheWorld",
+            ["Danger Zone"] = "DangerZone",
         }
         
         local musicName = {}
@@ -919,6 +933,8 @@
             ["Fortunate Son"] = "FortunateSon",
             ["Paint It Black"] = "PaintItBlack",
             ["Paranoid"] = "Paranoid",
+            ["Everybody Wants to Rule the World"] = "RuleTheWorld",
+            ["Danger Zone"] = "DangerZone",
         }
         
         local musicNamePRT = {}
@@ -1076,6 +1092,8 @@
             ["Fortunate Son"] = "FortunateSon",
             ["Paint It Black"] = "PaintItBlack",
             ["Paranoid"] = "Paranoid",
+            ["Everybody Wants to Rule the World"] = "RuleTheWorld",
+            ["Danger Zone"] = "DangerZone",
         }
         
         local DLCNameMusics = {}
