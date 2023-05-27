@@ -27,7 +27,7 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.94AF"
+        local SCRIPT_VERSION = "1.95"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -300,14 +300,6 @@
             end
         end
 
-        local randomMsgs = {
-            "Smell like Vietnam but we are crazy",
-            "hmm we want freedom and oil",
-            "war is not ready but we are ready",
-            "Good Morning Vietnam",
-            "Ready to fight for freedom?",
-        }
-
         local function join_path(parent, child)
             local sub = parent:sub(-1)
             if sub == "/" or sub == "\\" then
@@ -445,6 +437,12 @@
                     name="Everybody Wants to Rule the World",
                     source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/RuleTheWorld.wav",
                     script_relpath="store/music_stand/RuleTheWorld.wav",
+                    check_interval=default_check_interval,
+                },
+                {
+                    name="America F**k Yeah",
+                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/AmericaFYeah.wav",
+                    script_relpath="store/music_stand/AmericaFYeah.wav",
                     check_interval=default_check_interval,
                 },
             }
@@ -601,6 +599,7 @@
         EnableMusics = CustomVehicleTF:toggle_loop("Toggle Musics", {}, "", function()end)
 
         local Songs = {
+            ["America Fuck Yeah"] = "AmericaFYeah",
             ["California Dreamin"] = "CaliforniaDreamin",
             ["Fortunate Son"] = "FortunateSon",
             ["Paint It Black"] = "PaintItBlack",
@@ -692,8 +691,6 @@
             end
             if menu.get_value(EnableMusics) == true then
                 FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
-                local randomMSG = randomMsgs[math.random(#randomMsgs)]
-                AerialFleetsNotify(randomMSG)
             end
             for _, pid in pairs(playerList) do
                 if AvailableSession() and not players.is_in_interior(pid) then
@@ -735,8 +732,6 @@
             end
             if menu.get_value(EnableMusics) == true then
                 FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
-                local randomMSG = randomMsgs[math.random(#randomMsgs)]
-                AerialFleetsNotify(randomMSG)
             end
             for _, pid in pairs(playerList) do
                 if AvailableSession() and not players.is_in_interior(pid) then
@@ -929,6 +924,7 @@
         ShowingMSGS = PresetSpawningTF:toggle_loop("Show Messages", {}, "", function()end)
 
         local SongsPT = {
+            ["America Fuck Yeah"] = "AmericaFYeah",
             ["California Dreamin"] = "CaliforniaDreamin",
             ["Fortunate Son"] = "FortunateSon",
             ["Paint It Black"] = "PaintItBlack",
@@ -944,7 +940,7 @@
 
         table.sort(musicNamePRT, function(a, b) return a[1] < b[1] end)
         
-        local selectedMusicPT = "California Dreamin"
+        local selectedMusicPT = "America Fuck Yeah"
         local songsNamePT = SongsPT[selectedMusicPT]
         PresetSpawningTF:list_select("Music List", {}, "", musicNamePRT, 1, function(index)
             selectedMusicPT = musicNamePRT[index]
@@ -993,8 +989,6 @@
                 end                            
                 if menu.get_value(EnableMusicsTF) == true then
                     FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
-                    local randomMSG = randomMsgs[math.random(#randomMsgs)]
-                    AerialFleetsNotify(randomMSG)
                 end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
@@ -1063,8 +1057,6 @@
                 end
                 if menu.get_value(EnableMusicsTF) == true then
                     FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
-                    local randomMSG = randomMsgs[math.random(#randomMsgs)]
-                    AerialFleetsNotify(randomMSG)
                 end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
@@ -1088,6 +1080,7 @@
         end
         ShowingMSGDLC = DLCs:toggle_loop("Show Messages", {}, "", function()end)
         local DLCSongs = {
+            ["America Fuck Yeah"] = "AmericaFYeah",
             ["California Dreamin"] = "CaliforniaDreamin",
             ["Fortunate Son"] = "FortunateSon",
             ["Paint It Black"] = "PaintItBlack",
@@ -1209,8 +1202,6 @@
                 end
                 if menu.get_value(EnableMusicsDLC) == true then
                     FleetSongs(join_path(songs, DLCSongsName .. ".wav"), SND_FILENAME | SND_ASYNC)
-                    local randomMSG = randomMsgs[math.random(#randomMsgs)]
-                    AerialFleetsNotify(randomMSG)
                 end
                 AerialFleetsNotify("Confirmed target. The US Air Force is coming soon. Sending tons of "..spawnerName..".".."\nReady to target, roger that. Thanks for the information.")
                 for _, pid in pairs(playerList) do
