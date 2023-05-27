@@ -27,7 +27,7 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.95"
+        local SCRIPT_VERSION = "1.95AF"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -106,12 +106,12 @@
 
         local function escort_attack(pedUser, hash, surfaceVehicle)
             local limitSpeed = 3200.0
-            local speedVehicle = 1300.0
+            local speedVehicle = 2650.0
             if not players.is_in_interior(pedUser) then
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and math.random(400, 800) or math.random(75, 200)
+                local altitude = surfaceVehicle and math.random(775, 1350) or math.random(100, 200)
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
@@ -146,6 +146,9 @@
                 VEHICLE.SET_PLANE_TURBULENCE_MULTIPLIER(vehicle, 0.0)
                 VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
                 VEHICLE.SET_VEHICLE_WINDOW_TINT(vehicle, 1)
+                VEHICLE.SET_VEHICLE_CUSTOM_PRIMARY_COLOUR(vehicle, math.random(0, 255), math.random(0, 255), math.random(0, 255))
+                VEHICLE.SET_VEHICLE_CUSTOM_SECONDARY_COLOUR(vehicle, math.random(0, 255), math.random(0, 255), math.random(0, 255))
+                VEHICLE.SET_VEHICLE_COLOURS(vehicle, math.random(0, 122), math.random(0, 122))
                 ENTITY.SET_ENTITY_INVINCIBLE(vehicle, true)
                 coords = ENTITY.GET_ENTITY_COORDS(playerPed, false)
                 coords.x = coords['x']
@@ -154,7 +157,7 @@
                 local hash_model = ped_models[math.random(#ped_models)]
                 request_model_load(hash_model)
                 local attacker = entities.create_ped(28, hash_model, coords, math.random(0, 270))
-                PED.SET_PED_AS_COP(attacker, true)
+                PED.SET_PED_AS_ENEMY(attacker, true)
                 PED.SET_DRIVER_AGGRESSIVENESS(attacker, 1.0)
                 PED.SET_PED_CONFIG_FLAG(attacker, 281, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 2, true)
@@ -182,6 +185,12 @@
                 PED.SET_PED_INTO_VEHICLE(attacker, vehicle, -1)
                 PED.CREATE_PED_INSIDE_VEHICLE(attacker, vehicle, 28, hash_model, -1, true)
                 ENTITY.SET_ENTITY_AS_MISSION_ENTITY(attacker, true, true)
+                if menu.get_value(SpecialBlip) == true then
+                    local BLIP = HUD.ADD_BLIP_FOR_ENTITY(vehicle)
+                    HUD.SET_BLIP_SPRITE(BLIP, math.random(686, 723))
+                    HUD.SET_BLIP_FADE(BLIP, 255, -1)
+                    HUD.SET_BLIP_DISPLAY(BLIP, 6)
+                end
                 local playerEnemy = players.get_position(pedUser)
                 playerEnemy.z = playerEnemy.z + altitude
                 if VEHICLE.IS_THIS_MODEL_A_HELI(vehicleHash) then
@@ -224,7 +233,6 @@
             while MISC.UPDATE_ONSCREEN_KEYBOARD() == 0 do
                 util.yield_once()
             end
-        
             if MISC.UPDATE_ONSCREEN_KEYBOARD() == 1 then
                 local text = MISC.GET_ONSCREEN_KEYBOARD_RESULT()
                 return text
@@ -278,7 +286,7 @@
                     ENTITY.SET_ENTITY_AS_MISSION_ENTITY(attacker, true, true)
                     TASK.TASK_VEHICLE_MISSION_PED_TARGET(attacker, vehicle, ped, 6, 500.0, 786988, 0.0, 0.0, true)
                     PED.SET_PED_ACCURACY(attacker, 100.0)
-                    PED.SET_PED_COMBAT_ABILITY(attacker, 2, true)
+                    PED.SET_PED_COMBAT_ABILITY(attacker, 2)
                     PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
                     PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, true)
                     PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 5, true)
@@ -515,12 +523,10 @@
         }
 
         local modelToDelete = {
-            util.joaat("s_m_y_marine_01"),
-            util.joaat("s_m_y_marine_03"),
-            util.joaat("s_m_y_pilot_01"),
             util.joaat("s_m_y_blackops_01"),
             util.joaat("s_m_m_marine_01"),
             util.joaat("s_m_m_pilot_02"),
+            util.joaat("s_m_y_pilot_01"),
             util.joaat("s_m_m_marine_02"),
             util.joaat("s_m_m_prisguard_01"),
             util.joaat("mp_g_m_pros_01"),
@@ -531,7 +537,11 @@
             util.joaat("mp_m_cocaine_01"),
             util.joaat("mp_m_counterfeit_01"),
             util.joaat("mp_m_exarmy_01"),
-            util.joaat("mp_m_fibsec_01")
+            util.joaat("mp_m_fibsec_01"),
+            util.joaat("s_m_m_ciasec_01"),
+            util.joaat("s_m_m_cntrybar_0"),
+            util.joaat("s_m_y_clown_01"),
+            util.joaat("s_m_y_swat_01"),
         }
         
         local planeModelNames = {}
@@ -594,6 +604,7 @@
         end)
         local PresetSpawningTF = TaskForce:list("Preset Spawner")
         local CustomVehicleTF = TaskForce:list("Custom Parts")
+        SpecialBlip = TaskForce:toggle_loop("Show Aerial Blips", {}, "welcome to zoo, "..os.date("%m/%d/%Y"), function() end)
         CustomVehicleAdvanced = CustomVehicleTF:toggle_loop("Custom Vehicle", {}, "", function()end)
         ShowMessages = CustomVehicleTF:toggle_loop("Show Messages", {}, "", function()end)
         EnableMusics = CustomVehicleTF:toggle_loop("Toggle Musics", {}, "", function()end)
@@ -734,7 +745,7 @@
                 FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
             end
             for _, pid in pairs(playerList) do
-                if AvailableSession() and not players.is_in_interior(pid) then
+                if AvailableSession() then
                     escort_attack(pid, textInput, false)
                     util.yield(delaySpawning * 1000)
                 end
@@ -769,7 +780,7 @@
         end, tostring(modelVehicle))
 
         ToggleRandom = TaskForce:toggle_loop("Random Player", {}, "Choose randomly players in the session and target automatically.", function()end)
-        ToggleSurfaceTASK = TaskForce:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control.\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
+        ToggleSurfaceTASK = TaskForce:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control. Watching in the sky, you will not be able to see Jets but you will receive a notification if the player targetted has been killed.\n\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
         TaskForce:action("Target Player", {"aftarget"}, "We need more communication and more precise for informations.\nTarget player is the priority objective for your choice if the player is in the session.", function()
             local isSurfaceTask = menu.get_value(ToggleSurfaceTASK) == true
             local isRandomToggle = menu.get_value(ToggleRandom) == true
@@ -949,12 +960,12 @@
 
         EnableMusicsTF = PresetSpawningTF:toggle_loop("Toggle Musics", {}, "", function()end)
         CustomPresets = PresetSpawningTF:toggle_loop("Toggle Preset Vehicle", {}, "", function()end)
-        ToggleSurfaceTF = PresetSpawningTF:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control.\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
+        ToggleSurfaceTF = PresetSpawningTF:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control. Watching in the sky, you will not be able to see Jets but you will receive a notification if the player targetted has been killed.\n\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
         PresetSpawningTF:divider("Presets Vehicles")
         for _, spawner in ipairs(tempSpawners) do
             local spawnerName = spawner[1]
             local spawnerModel = spawner[2]
-            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask"..spawnerModel}, "", function()
+            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask"..spawnerModel}, "Blip will disappear when they reach the target player or in a certain range.", function()
                 local player = PLAYER.PLAYER_PED_ID()
                 local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
                 local isSurfaceTF = menu.get_value(ToggleSurfaceTF) == true
@@ -992,7 +1003,7 @@
                 end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
-                        if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                        if players.get_name(pid) ~= "UndiscoveredPlayer" then
                             escort_attack(pid, spawnerModel, isSurfaceTF)
                             util.yield(delaySpawningPresets * 1000)
                         end
@@ -1022,7 +1033,7 @@
         for _, spawner in ipairs(heliSpawner) do
             local spawnerName = spawner[1]
             local spawnerModel = spawner[2]
-            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask" .. spawnerModel}, "", function()
+            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask" .. spawnerModel}, "Blip will disappear when they reach the target player or in a certain range.", function()
                 local player = PLAYER.PLAYER_PED_ID()
                 local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
                 local isSurfaceTF = menu.get_value(ToggleSurfaceTF) == true
@@ -1060,7 +1071,7 @@
                 end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
-                        if not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                        if players.get_name(pid) ~= "UndiscoveredPlayer" then
                             escort_attack(pid, spawnerModel, isSurfaceTF)
                             util.yield(delaySpawningPresets * 1000)
                         end
@@ -1096,7 +1107,7 @@
 
         table.sort(DLCNameMusics, function(a, b) return a[1] < b[1] end)
         
-        local selectedMusicDLCS = "California Dreamin"
+        local selectedMusicDLCS = "America Fuck Yeah"
         local DLCSongsName = DLCSongs[selectedMusicDLCS]
         DLCs:list_select("Music List", {}, "", DLCNameMusics, 1, function(index)
             selectedMusicPT = DLCNameMusics[index]
@@ -1177,35 +1188,23 @@
                 local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
                 local modelHash = util.joaat(spawnerModel)
                 local showingMsgs = menu.get_value(ShowingMSGDLC) == true
-                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then
-                    AerialFleetsNotify("Sit down in a vehicle.")
-                    return
-                end
-                if isSurfaceDLC then
-                    AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.")
-                    return
-                end
-                if not STREAMING.IS_MODEL_VALID(modelHash) then
-                    AerialFleetsNotify("Make sure you need to load the model: "..spawnerName)
-                    return
-                end
-                if not STREAMING.IS_MODEL_A_VEHICLE(modelHash) then
-                    AerialFleetsNotify("I'm sorry, we cannot send the plane named: "..spawnerName)
-                    return
-                end
+                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
+                if isSurfaceDLC then AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.") return end
+                if not STREAMING.IS_MODEL_VALID(modelHash) then AerialFleetsNotify("Make sure you need to load the model: "..spawnerName) return end
+                if not STREAMING.IS_MODEL_A_VEHICLE(modelHash) then AerialFleetsNotify("I'm sorry, we cannot send the plane named: "..spawnerName) return end
                 if showingMsgs then
                     for i = delayCountdownDLC, 1, -1 do
                         AerialFleetsNotify("Ready in "..i.." seconds.")
                         util.yield(1000)
                     end
-                    chat.send_message(dlcMsgs, false, true, true) 
+                    chat.send_message(dlcMsgs, false, true, true)
                 end
                 if menu.get_value(EnableMusicsDLC) == true then
                     FleetSongs(join_path(songs, DLCSongsName .. ".wav"), SND_FILENAME | SND_ASYNC)
                 end
                 AerialFleetsNotify("Confirmed target. The US Air Force is coming soon. Sending tons of "..spawnerName..".".."\nReady to target, roger that. Thanks for the information.")
                 for _, pid in pairs(playerList) do
-                    if AvailableSession() and not players.is_in_interior(pid) and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                    if AvailableSession() and players.get_name(pid) ~= "UndiscoveredPlayer" then
                         escort_attack(pid, spawnerModel, false)
                         util.yield(delaySpawningDLC * 1000)
                     end
