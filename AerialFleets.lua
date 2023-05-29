@@ -973,7 +973,7 @@
         for _, spawner in ipairs(tempSpawners) do
             local spawnerName = spawner[1]
             local spawnerModel = spawner[2]
-            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask"..spawnerModel}, "Blip will disappear when they reach the target player or in a certain range.", function()
+            PresetSpawningTF:action("Spawn " .. spawnerName, {"aftask"..spawnerModel}, "Blips will disappear when they reach their goal of targeting players or in a certain range.", function()
                 local player = PLAYER.PLAYER_PED_ID()
                 local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
                 local isSurfaceTF = menu.get_value(ToggleSurfaceTF) == true
