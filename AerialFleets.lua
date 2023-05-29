@@ -92,7 +92,6 @@
             util.joaat("mp_g_m_pros_01"),
             util.joaat("mp_m_avongoon"),
             util.joaat("mp_m_boatstaff_01"),
-            util.joaat("mp_m_bogdangoon"),
             util.joaat("mp_m_claude_01"),
             util.joaat("mp_m_cocaine_01"),
             util.joaat("mp_m_counterfeit_01"),
@@ -149,7 +148,8 @@
                 VEHICLE.SET_VEHICLE_CUSTOM_PRIMARY_COLOUR(vehicle, math.random(0, 255), math.random(0, 255), math.random(0, 255))
                 VEHICLE.SET_VEHICLE_CUSTOM_SECONDARY_COLOUR(vehicle, math.random(0, 255), math.random(0, 255), math.random(0, 255))
                 VEHICLE.SET_VEHICLE_COLOURS(vehicle, math.random(0, 122), math.random(0, 122))
-                ENTITY.SET_ENTITY_INVINCIBLE(vehicle, true)
+                VEHICLE.SET_VEHICLE_EXTRA_COLOURS(vehicle, math.random(0, 122))
+                ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(ToggleGods))
                 coords = ENTITY.GET_ENTITY_COORDS(playerPed, false)
                 coords.x = coords['x']
                 coords.y = coords['y']
@@ -163,8 +163,9 @@
                 PED.SET_PED_CONFIG_FLAG(attacker, 2, true)
                 PED.SET_PED_CONFIG_FLAG(attacker, 33, false)
                 PED.SET_PED_RANDOM_COMPONENT_VARIATION(attacker, 0)
-                PED.SET_PED_SHOOT_RATE(attacker, 5)
+                PED.SET_PED_SHOOT_RATE(attacker, 999)
                 PED.SET_PED_ACCURACY(attacker, 100.0)
+                PED.SET_PED_FIRING_PATTERN(attacker, 0xD6FF6D61)
                 WEAPON.GIVE_DELAYED_WEAPON_TO_PED(attacker, 0x5EF9FEC4, 1, 1)
                 PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
                 PED.SET_PED_COMBAT_ABILITY(attacker, 2)
@@ -178,7 +179,7 @@
                 PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 4, true)
                 PED.SET_PED_COMBAT_MOVEMENT(attacker, 2)
                 PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(attacker, true)
-                ENTITY.SET_ENTITY_INVINCIBLE(attacker, true)
+                ENTITY.SET_ENTITY_INVINCIBLE(attacker, menu.get_value(ToggleGods))
                 PED.SET_PED_CONFIG_FLAG(attacker, 52, true)
                 local relHash = PED.GET_PED_RELATIONSHIP_GROUP_HASH(ped)
                 PED.SET_PED_RELATIONSHIP_GROUP_HASH(attacker, relHash)
@@ -189,10 +190,11 @@
                     local BLIP = HUD.ADD_BLIP_FOR_ENTITY(vehicle)
                     HUD.SET_BLIP_SPRITE(BLIP, math.random(686, 723))
                     HUD.SET_BLIP_FADE(BLIP, 255, -1)
-                    HUD.SET_BLIP_DISPLAY(BLIP, 6)
                 end
                 local playerEnemy = players.get_position(pedUser)
-                playerEnemy.z = playerEnemy.z + altitude
+                WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
+                WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
+                VEHICLE.SET_VEHICLE_SHOOT_AT_TARGET(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
                 if VEHICLE.IS_THIS_MODEL_A_HELI(vehicleHash) then
                     TASK.TASK_HELI_CHASE(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
                     local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(ped, true)
@@ -225,6 +227,12 @@
                 PED.SET_PED_CAN_BE_KNOCKED_OFF_VEHICLE(attacker, 1)
                 PED.SET_PED_SEEING_RANGE(attacker, 99999.0)
                 PED.SET_PED_HEARING_RANGE(attacker, 99999.0)
+                for i = 2, 3 do
+                    PED.SET_PED_TARGET_LOSS_RESPONSE(attacker, i)
+                end
+                PED.SET_PED_CAN_RAGDOLL(attacker, false)
+                PED.SET_PED_ALERTNESS(attacker, 3)
+                TASK.SET_TASK_VEHICLE_CHASE_BEHAVIOR_FLAG(attacker, 1, true)
             end
         end
 
@@ -532,7 +540,6 @@
             util.joaat("mp_g_m_pros_01"),
             util.joaat("mp_m_avongoon"),
             util.joaat("mp_m_boatstaff_01"),
-            util.joaat("mp_m_bogdangoon"),
             util.joaat("mp_m_claude_01"),
             util.joaat("mp_m_cocaine_01"),
             util.joaat("mp_m_counterfeit_01"),
@@ -605,6 +612,7 @@
         local PresetSpawningTF = TaskForce:list("Preset Spawner")
         local CustomVehicleTF = TaskForce:list("Custom Parts")
         SpecialBlip = TaskForce:toggle_loop("Show Aerial Blips", {}, "welcome to zoo, "..os.date("%m/%d/%Y"), function() end)
+        ToggleGods = TaskForce:toggle_loop("Toggle Godmode", {}, "Release these player without godmode, fight like real, turn on = session is dead", function()end)
         CustomVehicleAdvanced = CustomVehicleTF:toggle_loop("Custom Vehicle", {}, "", function()end)
         ShowMessages = CustomVehicleTF:toggle_loop("Show Messages", {}, "", function()end)
         EnableMusics = CustomVehicleTF:toggle_loop("Toggle Musics", {}, "", function()end)
