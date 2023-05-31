@@ -27,14 +27,9 @@
         util.keep_running()
         util.require_natives(1681379138)
         local int_max = 2147483647
-        local SCRIPT_VERSION = "1.95AF"
+        local SCRIPT_VERSION = "1.96"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
-
-        local aalib = require("aalib")
-        FleetSongs = aalib.play_sound
-        local SND_ASYNC<const> = 0x0001
-        local SND_FILENAME<const> = 0x00020000
 
         AerialFleetsNotify = function(str) if ToggleNotify then if NotifMode == 2 then util.show_corner_help(AerialFleetMSG.."~s~~n~"..str) else util.toast(AerialFleetMSG.."\n\n"..str) end end end
         AWACSNotify = function(str) if ToggleNotify then if NotifMode == 2 then util.show_corner_help("AWACS Detection System".."~s~~n~"..str ) else util.toast("AWACS Detection System".."\n\n"..str) end end end
@@ -43,11 +38,6 @@
         local script_resources = filesystem.resources_dir() .. "AerialFleets" -- Redirects to %appdata%\Stand\Lua Scripts\resources\AerialFleets
         if not filesystem.is_dir(script_resources) then
             filesystem.mkdirs(script_resources)
-        end
-
-        local songs = filesystem.store_dir() .. "/music_stand" -- Redirects to %appdata%\Stand\Lua Scripts\store\music_stand
-        if not filesystem.is_dir(songs) then
-            filesystem.mkdirs(songs)
         end
 
     ---========================================----
@@ -110,7 +100,7 @@
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and math.random(775, 1350) or math.random(100, 200)
+                local altitude = surfaceVehicle and math.random(300, 750) or math.random(100, 200)
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
@@ -165,8 +155,13 @@
                 PED.SET_PED_RANDOM_COMPONENT_VARIATION(attacker, 0)
                 PED.SET_PED_SHOOT_RATE(attacker, 999)
                 PED.SET_PED_ACCURACY(attacker, 100.0)
+                PED.SET_PED_FIRING_PATTERN(attacker, 0x914E786F)
+                PED.SET_PED_FIRING_PATTERN(attacker, 0xC6EE6B4C)
                 PED.SET_PED_FIRING_PATTERN(attacker, 0xD6FF6D61)
-                WEAPON.GIVE_DELAYED_WEAPON_TO_PED(attacker, 0x5EF9FEC4, 1, 1)
+                PED.SET_PED_FIRING_PATTERN(attacker, 0xD31265F2)
+                PED.SET_PED_FIRING_PATTERN(attacker, 0xA018DB8A)
+                PED.SET_PED_FIRING_PATTERN(attacker, 0x9C74B406)
+                WEAPON.GIVE_DELAYED_WEAPON_TO_PED(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"), 9999, false)
                 PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
                 PED.SET_PED_COMBAT_ABILITY(attacker, 2)
                 PED.SET_PED_COMBAT_RANGE(attacker, 3)
@@ -192,6 +187,25 @@
                     HUD.SET_BLIP_FADE(BLIP, 255, -1)
                 end
                 local playerEnemy = players.get_position(pedUser)
+                local model = ENTITY.GET_ENTITY_MODEL(vehicleHash)
+                if model == util.joaat("strikeforce") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_MISSILE"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_BARRAGE"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_CANNON"))
+                elseif model == util.joaat("lazer") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
+                elseif model == util.joaat("rogue") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_MG"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_CANNON"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_MISSILE"))
+                elseif model == util.joaat("molotok") then
+                    VEHICLE.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MISSILE"))
+                    VEHICLE.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MG"))
+                else
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
+                end
                 WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
                 WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
                 VEHICLE.SET_VEHICLE_SHOOT_AT_TARGET(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
@@ -247,81 +261,11 @@
             end
         end
 
-        local function harass_vehicle(pedUser, vehicleHash, aerialCar)
-            if aerialCar then
-                if not players.is_in_interior(pedUser) then
-                    local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                    local hash = util.joaat(vehicleHash)
-                    request_model_load(hash)
-                    local altitude = 150
-                    local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(ped, 0.0, 0.0, altitude)
-                    local vehicle = entities.create_vehicle(hash, coords, ENTITY.GET_ENTITY_HEADING(ped))
-                    if not STREAMING.HAS_MODEL_LOADED(vehicle) then
-                        request_model_load(vehicle)
-                    end
-                    for i = 0,49 do
-                        local num = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)
-                        VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
-                    end
-                    VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
-                    VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, 320.0)
-                    VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, 1000.0)
-                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, 4)
-                    VEHICLE.SET_HELI_BLADES_FULL_SPEED(vehicle)
-                    VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
-                    ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(PlaneToggleGod))
-                    coords = ENTITY.GET_ENTITY_COORDS(ped, false)
-                    coords.x = coords['x']
-                    coords.y = coords['y']
-                    coords.z = coords['z']
-                    local hash_model = util.joaat("s_m_y_pilot_01")
-                    request_model_load(hash_model)
-                    local attacker = entities.create_ped(28, hash_model, coords, math.random(0, 270))
-                    PED.SET_PED_AS_COP(attacker, true)
-                    PED.CREATE_PED_INSIDE_VEHICLE(attacker, vehicle, 28, hash_model, -1, true)
-                    PED.SET_PED_CONFIG_FLAG(attacker, 281, true)
-                    PED.SET_PED_CONFIG_FLAG(attacker, 2, true)
-                    PED.SET_PED_CONFIG_FLAG(attacker, 33, false)
-                    PED.SET_PED_HEARING_RANGE(attacker, 99999)
-                    PED.SET_PED_RANDOM_COMPONENT_VARIATION(attacker, 0)
-                    PED.SET_PED_SHOOT_RATE(attacker, 5)
-                    VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
-                    VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, 100.0)
-                    VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, 1000.0)
-                    VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, 4)
-                    VEHICLE.SET_VEHICLE_EXPLODES_ON_HIGH_EXPLOSION_DAMAGE(vehicle, false)
-                    PED.SET_PED_INTO_VEHICLE(attacker, vehicle, -1)
-                    ENTITY.SET_ENTITY_AS_MISSION_ENTITY(attacker, true, true)
-                    TASK.TASK_VEHICLE_MISSION_PED_TARGET(attacker, vehicle, ped, 6, 500.0, 786988, 0.0, 0.0, true)
-                    PED.SET_PED_ACCURACY(attacker, 100.0)
-                    PED.SET_PED_COMBAT_ABILITY(attacker, 2)
-                    PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
-                    PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, true)
-                    PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 5, true)
-                    PED.SET_PED_CAN_BE_KNOCKED_OFF_VEHICLE(attacker, 1)
-                    PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(ped, true)
-                    ENTITY.SET_ENTITY_INVINCIBLE(attacker, true)
-                    PED.SET_PED_CONFIG_FLAG(attacker, 52, true)
-                    local relHash = PED.GET_PED_RELATIONSHIP_GROUP_HASH(ped)
-                    PED.SET_PED_RELATIONSHIP_GROUP_HASH(attacker, relHash)
-                end
-            end
-        end
-
         local function ResetRendering()
             menu.trigger_commands("locktime off")
             menu.trigger_commands("clouds normal")
             if AvailableSession() then
                 menu.trigger_commands("syncclock")
-            end
-        end
-
-        local function join_path(parent, child)
-            local sub = parent:sub(-1)
-            if sub == "/" or sub == "\\" then
-                return parent .. child
-            else
-                return parent .. "/" .. child
             end
         end
 
@@ -413,54 +357,6 @@
                     script_relpath="resources/AerialFleets/DisplayLogo.txt",
                     check_interval=default_check_interval,
                 },
-                {
-                    name="aalib",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/AerialFleets/main/lib/aalib.dll",
-                    script_relpath="lib/aalib.dll",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="California Dreamin",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/CaliforniaDreamin.wav",
-                    script_relpath="store/music_stand/CaliforniaDreamin.wav",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="Paint It Black",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/PaintItBlack.wav",
-                    script_relpath="store/music_stand/PaintItBlack.wav",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="Fortunate Son",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/FortunateSon.wav",
-                    script_relpath="store/music_stand/FortunateSon.wav",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="Paranoid",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/Paranoid.wav",
-                    script_relpath="store/music_stand/Paranoid.wav",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="Danger Zone",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/DangerZone.wav",
-                    script_relpath="store/music_stand/DangerZone.wav",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="Everybody Wants to Rule the World",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/RuleTheWorld.wav",
-                    script_relpath="store/music_stand/RuleTheWorld.wav",
-                    check_interval=default_check_interval,
-                },
-                {
-                    name="America F**k Yeah",
-                    source_url="https://raw.githubusercontent.com/StealthyAD/music-stand/main/AmericaFYeah.wav",
-                    script_relpath="store/music_stand/AmericaFYeah.wav",
-                    check_interval=default_check_interval,
-                },
             }
         }
 
@@ -476,7 +372,6 @@
         local ExcludeParts = AerialFleets:list("Exclusions", {"afexclusions"})
         local Detections = AerialFleets:list("Detections", {"afdetections"}, "Detect any ways and remove them by consequence.")
         local TaskForce = AerialFleets:list("Task Force", {"aftaskforce"})
-        local PlaneParts = AerialFleets:list("US Air Force", {"afusaf"})
         local WeatherParts = AerialFleets:list("World & Weather", {"afworld"})
         local Settings = AerialFleets:list("Settings", {"afsettings"})
 
@@ -492,23 +387,19 @@
         ExcludeParts:toggle("Exclude Organization Members", {"aforg"}, "Exclude Organization Members for using these features.", toggleOrgCallback)
 
     ---========================================----
-    ---    Continue part for Aerial Fleets
+    ---    Task Force Aerial Superiority
     ----========================================----
 
-        PlaneParts:divider("Advanced Aerial Defense")
-        delayAirForce = PlaneParts:slider("Delay Time", {"afdelayaf"}, "Recommended to not spam if you are in public session to avoid saturation of vehicle.\nRecommended: 3 seconds.\nApplies also for helicopters & Planes", 2, int_max, 3, 1, function()end)
-        PlaneCount = PlaneParts:slider("Number of Generation of Planes", {"afplanes"}, "For purposes: limit atleast 5 planes if you are in Public session with 30 players.".."\n\nFor recommendation:".."\n".."\n- Lazer: 3 or 5 more.", 1, 10, 1, 1, function()end)
-        PlaneToggleGod = PlaneParts:toggle_loop("Toggle Godmode Air Force", {}, "Toggle (Enable/Disable) Godmode Planes while using \"Send Air Force\".",  function()end)
-        
-        PlaneParts:divider("Aerial Defense (US Air Force)")
-        local planeModels = {
-            ["Lazer"] = "lazer",
-            ["V-65 Molotok"] = "molotok",
-            ["Western Rogue"] = "rogue",
-            ["Pyro"] = "pyro",
-            ["P-45 Nokota"] = "nokota",
-        }
+        local specialMsg = "US Air Force has sent a friend request."
+        TaskForce:divider("Parameters for Task Force")
+        TaskForce:action("What is Task Force", {}, "Read how does work Task Force in a single summary to understand.\nUndetectable by modders, take the opportunity to invade the session with aggressive means.", function()
+            AerialFleetsNotify(TaskForceDesc)
+        end)
+        local PresetSpawningTF = TaskForce:list("Preset Spawner")
+        local CustomVehicleTF = TaskForce:list("Custom Parts")
+        SpecialBlip = TaskForce:toggle_loop("Show Aerial Blips", {}, "welcome to zoo, "..os.date("%m/%d/%Y"), function() end)
 
+        ToggleGods = TaskForce:toggle_loop("Toggle Godmode", {}, "Release these player without godmode, fight like real, turn on = session is dead", function()end)
         local vehicleModelsToDelete = {
             util.joaat("lazer"),
             util.joaat("hydra"),
@@ -550,36 +441,8 @@
             util.joaat("s_m_y_clown_01"),
             util.joaat("s_m_y_swat_01"),
         }
-        
-        local planeModelNames = {}
-        for name, _ in pairs(planeModels) do
-            table.insert(planeModelNames, name)
-        end
 
-        table.sort(planeModelNames, function(a, b) return a[1] < b[1] end)
-        
-        local selectedPlaneModel = "Lazer"
-        local planesHash = planeModels[selectedPlaneModel]
-        
-        PlaneParts:list_select("Types of Planes", {"afplanes"}, "The entities that will add while sending air force planes.", planeModelNames, 1, function(index)
-            selectedPlaneModel = planeModelNames[index]
-            planesHash = planeModels[selectedPlaneModel]
-        end)
-
-        PlaneParts:action("Send Air Force", {"afusafsp"}, "Sending America to war and intervene more planes.\nWARNING: The action is irreversible in the session if toggle godmode on.\nNOTE: Toggle Exclude features.", function()
-            local playerList = players.list(EToggleSelf, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-            local delay = menu.get_value(delayAirForce) * 1000
-            for _, pid in pairs(playerList) do
-                if AvailableSession() and not players.is_in_interior(pid) then
-                    for _ = 1, menu.get_value(PlaneCount) do
-                        harass_vehicle(pid, planesHash, true)
-                        util.yield(delay)
-                    end
-                end
-            end
-        end)
-
-        PlaneParts:action("Cleanup Air Force", {}, "Includes jets & helicopters.", function()
+        TaskForce:action("Cleanup Air Force", {}, "Includes jets & helicopters.", function()
             local ct = 0
             local vehicles = entities.get_all_vehicles_as_handles()
             for k, veh in pairs(vehicles) do
@@ -600,48 +463,9 @@
             end
         end)
 
-    ---========================================----
-    ---    Task Force Aerial Superiority
-    ----========================================----
-
-        local specialMsg = "US Air Force has sent a friend request."
-        TaskForce:divider("Parameters for Task Force")
-        TaskForce:action("What is Task Force", {}, "Read how does work Task Force in a single summary to understand.\nUndetectable by modders, take the opportunity to invade the session with aggressive means.", function()
-            AerialFleetsNotify(TaskForceDesc)
-        end)
-        local PresetSpawningTF = TaskForce:list("Preset Spawner")
-        local CustomVehicleTF = TaskForce:list("Custom Parts")
-        SpecialBlip = TaskForce:toggle_loop("Show Aerial Blips", {}, "welcome to zoo, "..os.date("%m/%d/%Y"), function() end)
-        ToggleGods = TaskForce:toggle_loop("Toggle Godmode", {}, "Release these player without godmode, fight like real, turn on = session is dead", function()end)
         CustomVehicleAdvanced = CustomVehicleTF:toggle_loop("Custom Vehicle", {}, "", function()end)
         ShowMessages = CustomVehicleTF:toggle_loop("Show Messages", {}, "", function()end)
-        EnableMusics = CustomVehicleTF:toggle_loop("Toggle Musics", {}, "", function()end)
-
-        local Songs = {
-            ["America Fuck Yeah"] = "AmericaFYeah",
-            ["California Dreamin"] = "CaliforniaDreamin",
-            ["Fortunate Son"] = "FortunateSon",
-            ["Paint It Black"] = "PaintItBlack",
-            ["Paranoid"] = "Paranoid",
-            ["Everybody Wants to Rule the World"] = "RuleTheWorld",
-            ["Danger Zone"] = "DangerZone",
-        }
-        
-        local musicName = {}
-        for name, _ in pairs(Songs) do
-            table.insert(musicName, name)
-        end
-
-        table.sort(musicName, function(a, b) return a[1] < b[1] end)
-        
-        local selectedMusic = "California Dreamin"
-        local songsName = Songs[selectedMusic]
-        CustomVehicleTF:list_select("Music List", {}, "", musicName, 1, function(index)
-            selectedMusic = musicName[index]
-            songsName = Songs[selectedMusic]
-        end)
-
-        CustomVehicleTF:text_input("Send Message", {"aftaskforcemsg"}, "America has sent a friend request.", function(typeText)
+        CustomVehicleTF:text_input("Send Message", {"aftaskforcemsg"}, "Don't play with the Great Satan.", function(typeText)
             if typeText ~= "" then
                 specialMsg = typeText
             else
@@ -708,9 +532,6 @@
                 end
                 chat.send_message(specialMsg, false, true, true)
             end
-            if menu.get_value(EnableMusics) == true then
-                FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
-            end
             for _, pid in pairs(playerList) do
                 if AvailableSession() and not players.is_in_interior(pid) then
                     escort_attack(pid, textInput, true)
@@ -748,9 +569,6 @@
                     util.yield(1000)
                 end
                 chat.send_message(specialMsg, false, true, true)
-            end
-            if menu.get_value(EnableMusics) == true then
-                FleetSongs(join_path(songs, songsName .. ".wav"), SND_FILENAME | SND_ASYNC)
             end
             for _, pid in pairs(playerList) do
                 if AvailableSession() then
@@ -830,7 +648,7 @@
                     AerialFleetsNotify("Confirmed target player: "..playerName..".".."\nReady to target, roger that. Thanks for the information.")
                 else
                     AerialFleetsNotify("I'm sorry, you cannot target "..playerName.." while staying on the base. But I have an idea to force. Let's US Army do something.")
-                    for i = 1, 5 do
+                    for _ = 1, 5 do
                         menu.trigger_commands("interiorkick"..playerName)
                     end
                 end
@@ -862,7 +680,7 @@
                             break
                         else
                             AerialFleetsNotify("I'm sorry, you cannot target "..textInput.." while staying on the base. But I have an idea to force. Let's US Army do something.")
-                            for i = 1, 5 do
+                            for _ = 1, 5 do
                                 menu.trigger_commands("interiorkick"..textInput)
                             end
                         end
@@ -880,7 +698,6 @@
     ----========================================----
 
         PresetSpawningTF:divider("Parameters for Presets Vehicles")
-        local DLCs = PresetSpawningTF:list("DLCs Customs")
         local delaySpawningPresets = 1
         PresetSpawningTF:text_input("Delay Time", {"aftimertfpresets"}, "Do not abuse for spawning vehicle, do not go to lower for preventing for crash, mass entities.\n\nMeasured in seconds.", function(typeText)
             if typeText ~= "" then
@@ -897,14 +714,14 @@
         end, delaySpawningPresets)
 
         local tableSpawners = {
-            ["Lazer"] = "lazer",
-            ["Molotok"] = "molotok",
-            ["Rogue"] = "rogue",
-            ["Pyro"] = "pyro",
-            ["Nokota"] = "nokota",
-            ["Starling"] = "starling",
-            ["Seabreeze"] = "seabreeze",
-            ["Strikeforce"] = "strikeforce",
+            ["P-996 Lazer"] = "lazer",
+            ["V-65 Molotok"] = "molotok",
+            ["Western Rogue"] = "rogue",
+            ["Buckingham Pyro"] = "pyro",
+            ["P-45 Nokota"] = "nokota",
+            ["LF-22 Starling"] = "starling",
+            ["Western Seabreeze"] = "seabreeze",
+            ["B-11 Strikeforce"] = "strikeforce",
         }
 
         local tempSpawners = {}
@@ -917,7 +734,7 @@
         end)
 
         local msgPresets = "US Air Force has sent a friend request."
-        PresetSpawningTF:text_input("Send Message", {"aftaskforcemsgpr"}, "America has sent a friend request.", function(typeText)
+        PresetSpawningTF:text_input("Send Message", {"aftaskforcemsgpr"}, "Don't play with the Great Satan.", function(typeText)
             if typeText ~= "" then
                 msgPresets = typeText
             else
@@ -941,35 +758,9 @@
         end, delayCountdownTF)
 
         ShowingMSGS = PresetSpawningTF:toggle_loop("Show Messages", {}, "", function()end)
-
-        local SongsPT = {
-            ["America Fuck Yeah"] = "AmericaFYeah",
-            ["California Dreamin"] = "CaliforniaDreamin",
-            ["Fortunate Son"] = "FortunateSon",
-            ["Paint It Black"] = "PaintItBlack",
-            ["Paranoid"] = "Paranoid",
-            ["Everybody Wants to Rule the World"] = "RuleTheWorld",
-            ["Danger Zone"] = "DangerZone",
-        }
-        
-        local musicNamePRT = {}
-        for name, _ in pairs(SongsPT) do
-            table.insert(musicNamePRT, name)
-        end
-
-        table.sort(musicNamePRT, function(a, b) return a[1] < b[1] end)
-        
-        local selectedMusicPT = "America Fuck Yeah"
-        local songsNamePT = SongsPT[selectedMusicPT]
-        PresetSpawningTF:list_select("Music List", {}, "", musicNamePRT, 1, function(index)
-            selectedMusicPT = musicNamePRT[index]
-            songsNamePT = SongsPT[selectedMusicPT]
-        end)
-
-        EnableMusicsTF = PresetSpawningTF:toggle_loop("Toggle Musics", {}, "", function()end)
         CustomPresets = PresetSpawningTF:toggle_loop("Toggle Preset Vehicle", {}, "", function()end)
         ToggleSurfaceTF = PresetSpawningTF:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control. Watching in the sky, you will not be able to see Jets but you will receive a notification if the player targetted has been killed.\n\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
-        PresetSpawningTF:divider("Presets Vehicles")
+        PresetSpawningTF:divider("Presets Vehicles (Planes)")
         for _, spawner in ipairs(tempSpawners) do
             local spawnerName = spawner[1]
             local spawnerModel = spawner[2]
@@ -1006,9 +797,6 @@
                     end
                     chat.send_message(msgPresets, false, true, true)
                 end                            
-                if menu.get_value(EnableMusicsTF) == true then
-                    FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
-                end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
                         if players.get_name(pid) ~= "UndiscoveredPlayer" then
@@ -1020,7 +808,7 @@
             end)
         end
 
-        PresetSpawningTF:divider("Helicopters")
+        PresetSpawningTF:divider("Presets Vehicles (Helicopters)")
 
         local heliTables = {
             ["FH-1 Hunter"] = "hunter",
@@ -1074,147 +862,12 @@
                     end
                     chat.send_message(msgPresets, false, true, true)
                 end
-                if menu.get_value(EnableMusicsTF) == true then
-                    FleetSongs(join_path(songs, songsNamePT .. ".wav"), SND_FILENAME | SND_ASYNC)
-                end
                 for _, pid in pairs(playerList) do
                     if AvailableSession() then
                         if players.get_name(pid) ~= "UndiscoveredPlayer" then
                             escort_attack(pid, spawnerModel, isSurfaceTF)
                             util.yield(delaySpawningPresets * 1000)
                         end
-                    end
-                end
-            end)
-        end
-
-    ----========================================----
-    ---        Task Force (DLCs Presets)
-    ---         Sending presets vehicle
-    ----========================================----
-
-        DLCs:divider("Parameters")
-        if menu.get_edition() >= 2 then
-            EnableDLCS = DLCs:toggle_loop("Custom Vehicles", {}, "", function()end)
-        end
-        ShowingMSGDLC = DLCs:toggle_loop("Show Messages", {}, "", function()end)
-        local DLCSongs = {
-            ["America Fuck Yeah"] = "AmericaFYeah",
-            ["California Dreamin"] = "CaliforniaDreamin",
-            ["Fortunate Son"] = "FortunateSon",
-            ["Paint It Black"] = "PaintItBlack",
-            ["Paranoid"] = "Paranoid",
-            ["Everybody Wants to Rule the World"] = "RuleTheWorld",
-            ["Danger Zone"] = "DangerZone",
-        }
-        
-        local DLCNameMusics = {}
-        for name, _ in pairs(DLCSongs) do
-            table.insert(DLCNameMusics, name)
-        end
-
-        table.sort(DLCNameMusics, function(a, b) return a[1] < b[1] end)
-        
-        local selectedMusicDLCS = "America Fuck Yeah"
-        local DLCSongsName = DLCSongs[selectedMusicDLCS]
-        DLCs:list_select("Music List", {}, "", DLCNameMusics, 1, function(index)
-            selectedMusicPT = DLCNameMusics[index]
-            DLCSongsName = DLCSongs[selectedMusicDLCS]
-        end)
-        EnableMusicsDLC = DLCs:toggle_loop("Toggle Musics", {}, "", function()end)
-        local delaySpawningDLC = 1
-        DLCs:text_input("Delay Time", {"aftimertfdlc"}, "Do not abuse for spawning vehicle, do not go to lower for preventing for crash, mass entities.\n\nMeasured in seconds.", function(typeText)
-            if typeText ~= "" then
-                local delay = tonumber(typeText)
-                if delay and delay > 0 then
-                    delaySpawningDLC = delay
-                else
-                    AerialFleetsNotify("Invalid delay value. Please enter a positive number greater than 0.")
-                    delaySpawningDLC = 1
-                end
-            else
-                delaySpawningDLC = 1
-            end
-        end, delaySpawningDLC)
-
-        DLCs:hyperlink("Download Required files", "https://bit.ly/3WxIlli", "Do not use presets vehicles while not downloading required files.\nTo know how to drag: Stand/Custom DLCs and load.")
-        local dlcMsgs = "US Air Force has sent a friend request."
-        DLCs:text_input("Send Message", {"aftaskforcemsgdlc"}, "America has sent a friend request.", function(typeText)
-            if typeText ~= "" then
-                dlcMsgs = typeText
-            else
-                dlcMsgs = "US Air Force has sent a friend request."
-            end
-        end, dlcMsgs)
-
-        local delayCountdownDLC = 2
-        DLCs:text_input("Delay Countdown", {"aftimerprcountdlc"}, "Countdown for notification.\nMeasured in seconds.", function(typeText)
-            if typeText ~= "" then
-                local delay = tonumber(typeText)
-                if delay and delay > 1 then
-                    delayCountdownDLC = delay
-                else
-                    AerialFleetsNotify("Invalid delay value. Please enter a positive number greater than 1.")
-                    delayCountdownDLC = 2
-                end
-            else
-                delayCountdownDLC = 2
-            end
-        end, delayCountdownDLC)
-
-        DLCs:divider("Preset DLCs Vehicles")
-        local tableSpawnersDLC = {
-            ["Boeing F-15C Eagle"] = "f15c2",
-            ["Boeing F-15 Silent Eagle"] = "f15s",
-            ["Lockheed Martin F-16C Fighting Falcon"] = "f16c",
-            ["Lockheed Martin F-22A Raptor"] = "f22a",
-            ["Lockheed Martin F-35C Lightning II"] = "f35c",
-            ["General Atomics MQ-9 Reaper"] = "mq9",
-            ["General Atomics MQ-1 Predator"] = "mq1",
-        }
-
-        local tempSpawnersDLC = {}
-        for dlcSpawners, spawnerModel in pairs(tableSpawnersDLC) do
-            table.insert(tempSpawnersDLC, {dlcSpawners, spawnerModel})
-        end
-
-        table.sort(tempSpawnersDLC, function(a, b)
-            return a[1] < b[1]
-        end)
-
-        for _, spawner in ipairs(tempSpawnersDLC) do
-            local spawnerName = spawner[1]
-            local spawnerModel = spawner[2]
-            DLCs:action(spawnerName, {"afdlc"..spawnerModel}, "", function()
-                if menu.get_value(EnableDLCS) ~= true then
-                    AerialFleetsNotify("I'm sorry, please enable \"Custom Vehicles\" to make work DLCs Customs.")
-                    return
-                end
-                local player = PLAYER.PLAYER_PED_ID()
-                local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
-                local isSurfaceDLC = not PED.IS_PED_IN_ANY_PLANE(player)
-                local playerList = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
-                local modelHash = util.joaat(spawnerModel)
-                local showingMsgs = menu.get_value(ShowingMSGDLC) == true
-                if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
-                if isSurfaceDLC then AerialFleetsNotify("To operate the action, you need to be in a plane to operate planes.") return end
-                if not STREAMING.IS_MODEL_VALID(modelHash) then AerialFleetsNotify("Make sure you need to load the model: "..spawnerName) return end
-                if not STREAMING.IS_MODEL_A_VEHICLE(modelHash) then AerialFleetsNotify("I'm sorry, we cannot send the plane named: "..spawnerName) return end
-                if showingMsgs then
-                    for i = delayCountdownDLC, 1, -1 do
-                        AerialFleetsNotify("Ready in "..i.." seconds.")
-                        util.yield(1000)
-                    end
-                    chat.send_message(dlcMsgs, false, true, true)
-                end
-                if menu.get_value(EnableMusicsDLC) == true then
-                    FleetSongs(join_path(songs, DLCSongsName .. ".wav"), SND_FILENAME | SND_ASYNC)
-                end
-                AerialFleetsNotify("Confirmed target. The US Air Force is coming soon. Sending tons of "..spawnerName..".".."\nReady to target, roger that. Thanks for the information.")
-                for _, pid in pairs(playerList) do
-                    if AvailableSession() and players.get_name(pid) ~= "UndiscoveredPlayer" then
-                        escort_attack(pid, spawnerModel, false)
-                        util.yield(delaySpawningDLC * 1000)
                     end
                 end
             end)
@@ -1228,7 +881,9 @@
         Detections:divider("Detection Parts")
         Detections:action("Plane System Detection", {"afplanedetection"}, "Detect any players while using planes  who might be a suspect.", function()
             local players_detected = 0
-            for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
+            local playerLists = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+            if #playerLists <= 0 then AerialFleetsNotify("Empty session, the request has been denied.") return end
+            for _, pid in pairs(playerLists) do
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 if PED.IS_PED_IN_ANY_PLANE(playerPed) then
                     players_detected = players_detected + 1
@@ -1248,7 +903,9 @@
 
         Detections:action("Helicopter System Detection", {"afhelidetection"}, "Detect any players while using choppers who might be a suspect.", function()
             local players_detected = 0
-            for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
+            local playerLists = players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)
+            if #playerLists <= 0 then AerialFleetsNotify("Empty session, the request has been denied.") return end
+            for _, pid in pairs(playerLists) do
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 if PED.IS_PED_IN_ANY_HELI(playerPed) then
                     players_detected = players_detected + 1
@@ -1267,7 +924,7 @@
         end)
 
         Detections:divider("Removal Parts")
-        NetworkPart = Detections:toggle_loop("Control Request", {}, "Reduces the level of risk of being detected by modders.\nDisabling the option will increase your risk of being detected by modders, but the advantage remains the forcing kick of the powerful vehicle.", function()end)
+        NetworkPart = Detections:toggle_loop("Control Request", {}, "", function()end)
         Detections:toggle_loop("Remove All Aerial Vehicles", {}, "Let me do with the US Air Force to put them on the ground, all will be put on the ground well slept.", function()
             for _, pid in pairs(players.list(false, EToggleFriend, EToggleStrangers, EToggleCrew, EToggleOrg)) do
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
@@ -1478,104 +1135,7 @@
                     table.remove(AerialSpec, 1)
                 end
             end)
-
-            AerialFleetsR:action_slider("Kick Tools", {}, "Different types of Kick users:\n- AIO (All-in-One) - Faster kick\n- Blast\n- Boop\n- Array", {
-                "AIO (All-in-One)",
-                "Blast",
-                "Boop",
-                "Array"
-            }, function(kickType)
-                if kickType == 1 then
-                    local cmd = {"breakup", "kick", "confusionkick", "aids", "orgasmkick","nonhostkick", "pickupkick"}
-                    for _, command in pairs(cmd) do
-                        menu.trigger_commands(command..AerialName)
-                    end
-                    AerialFleetsNotify(AerialName.." has been forced breakup.")
-                elseif kickType == 2 then
-                    menu.trigger_commands("historyblock " .. AerialName)
-                    menu.trigger_commands("breakup" .. AerialName)
-                elseif kickType == 3 then
-                    menu.trigger_commands("breakup" .. AerialName)
-                    menu.trigger_commands("givesh" .. AerialName)
-                    util.trigger_script_event(1 << pid, {697566862, pid, 0x4, -1, 1, 1, 1}) --697566862 Give Collectible
-                    util.trigger_script_event(1 << pid, {1268038438, pid, memory.script_global(2657589 + 1 + (pid * 466) + 321 + 8)}) 
-                    util.trigger_script_event(1 << pid, {915462795, players.user(), memory.read_int(memory.script_global(0x1CE15F + 1 + (pid * 0x257) + 0x1FE))})
-                    util.trigger_script_event(1 << pid, {697566862, pid, 0x4, -1, 1, 1, 1})
-                    util.trigger_script_event(1 << pid, {1268038438, pid, memory.script_global(2657589 + 1 + (pid * 466) + 321 + 8)})
-                    util.trigger_script_event(1 << pid, {915462795, players.user(), memory.read_int(memory.script_global(1894573 + 1 + (pid * 608) + 510))})
-                else
-                    local int_min = -2147483647
-                    local int_max = 2147483647
-                    for i = 1, 15 do
-                        util.trigger_script_event(1 << pid, {23546804, 20, 1, -1, -1, -1, -1, math.random(int_min, int_max), math.random(int_min, int_max), 
-                        math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max),
-                        math.random(int_min, int_max), pid, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max)})
-                        util.trigger_script_event(1 << pid, {23546804, 20, 1, -1, -1, -1, -1})
-                    end
-                    menu.trigger_commands("givesh" .. AerialName)
-                    util.yield()
-                    for i = 1, 15 do
-                        util.trigger_script_event(1 << pid, {23546804, 20, 1, -1, -1, -1, -1, pid, math.random(int_min, int_max)})
-                        util.trigger_script_event(1 << pid, {23546804, 20, 1, -1, -1, -1, -1})
-                    end
-                end
-            end)
-
-            local PartsPlayer = AerialFleetsR:list("Aerial Force")
             local TaskForceP = AerialFleetsR:list("Task Force", {}, TaskForceDesc)
-            
-        ---========================================----
-        ---      Players Parts (Aerial Fleets)
-        ---        Sending in the sky planes
-        ---========================================----
-
-            PartsPlayer:divider("Aerial Defense (US Air Force)")
-            PlaneCountP = PartsPlayer:slider("Number of Generation of Planes", {"afplanes"}, "For purposes: limit atleast 5 planes if you are in Public session with 30 players.".."\n\nFor recommendation:".."\n".."- Lazer: 3 or 5 more.", 1, 25, 1, 1, function()end)
-            local delaySpawningPlayer = 1
-            PartsPlayer:text_input("Delay Time", {"aftimerp"}, "Do not abuse for spawning vehicle, do not go to lower for preventing for crash, mass entities.\n\nMeasured in seconds.", function(typeText)
-                if typeText ~= "" then
-                    local delay = tonumber(typeText)
-                    if delay and delay > 0 then
-                        delaySpawningPlayer = delay
-                    else
-                        AerialFleetsNotify("Invalid delay value. Please enter a positive number greater than 0.")
-                        delaySpawningPlayer = 1
-                    end
-                else
-                    delaySpawningPlayer = 1
-                end
-            end, delaySpawningPlayer)
-
-            local planeModelsP = {
-                ["Lazer"] = "lazer",
-                ["V-65 Molotok"] = "molotok",
-                ["Western Rogue"] = "rogue",
-                ["Pyro"] = "pyro",
-                ["P-45 Nokota"] = "nokota",
-            }
-            
-            local planeModelNames = {}
-            for name, _ in pairs(planeModelsP) do
-                table.insert(planeModelNames, name)
-            end
-    
-            table.sort(planeModelNames, function(a, b) return a[1] < b[1] end)
-            
-            local selectedPlaneModel = "Lazer"
-            local planesHashP = planeModelsP[selectedPlaneModel]
-            PartsPlayer:list_select("Types of Planes", {}, "The entities that will add while sending air force planes.", planeModelNames, 1, function(index)
-                selectedPlaneModel = planeModelNames[index]
-                planesHashP = planeModelsP[selectedPlaneModel]
-            end)
-    
-            PartsPlayer:action("Send Air Force", {"afusaft"}, "Sending America to war and intervene more planes.\nWARNING: The action is irreversible in the session if toggle godmode on.\nNOTE: Toggle Exclude features.", function()
-                if AvailableSession() then
-                    for _ = 1, menu.get_value(PlaneCountP) do
-                        harass_vehicle(pid, planesHashP, true)
-                        util.yield(delaySpawningPlayer * 1000)
-                    end
-                end
-            end)
 
         ---========================================----
         ---        Players Parts (Task Force)
@@ -1607,7 +1167,6 @@
                 local player = PLAYER.PLAYER_PED_ID()
                 local playerVehicle = PED.GET_VEHICLE_PED_IS_IN(player, true)
                 if not PED.IS_PED_IN_VEHICLE(player, playerVehicle, false) then AerialFleetsNotify("Sit down in a vehicle.") return end
-                if not (PED.IS_PED_IN_ANY_HELI(player) or PED.IS_PED_IN_ANY_PLANE(player)) then AerialFleetsNotify("To operate the action, you need to be in a plane/helis to operate vehicles.") return end
                 if pid == players.user() then AerialFleetsNotify("You cannot target yourself.") return end
                 local playerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
                 local vehicle = PED.GET_VEHICLE_PED_IS_IN(playerPed, false)
@@ -1640,10 +1199,6 @@
     ---       The part of useful lua script
     ----========================================----
 
-        util.on_stop(function()
-            FleetSongs(join_path(script_resources, "stops.wav"), SND_FILENAME | SND_ASYNC)
-        end)
-
         if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
             local InterLogo = directx.create_texture(script_resources .. "/AerialFleets.png")
 
@@ -1666,7 +1221,7 @@
             local alpha = 0
             local alpha_incr = 0.005
             if transitionLogoStarted ~= false then
-                logo_alpha_thread = util.create_thread(function()
+                util.create_thread(function()
                     while true do
                         alpha = alpha + alpha_incr
                         if alpha > 1 then
@@ -1679,7 +1234,7 @@
                     end
                 end)
                 
-                logo_thread = util.create_thread(function()
+                util.create_thread(function()
                     local start_time = os.clock()
                     while true do
                         directx.draw_texture(InterLogo, 0.08, 0.08, 0.5, 0.5, 0.5, 0.5, 0, 1, 1, 1, alpha)
