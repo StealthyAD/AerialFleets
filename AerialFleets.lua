@@ -26,8 +26,7 @@
 
         util.keep_running()
         util.require_natives(1681379138)
-        local int_max = 2147483647
-        local SCRIPT_VERSION = "1.96"
+        local SCRIPT_VERSION = "1.96A"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -135,10 +134,6 @@
                 VEHICLE.SET_PLANE_TURBULENCE_MULTIPLIER(vehicle, 0.0)
                 VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
                 VEHICLE.SET_VEHICLE_WINDOW_TINT(vehicle, 1)
-                VEHICLE.SET_VEHICLE_CUSTOM_PRIMARY_COLOUR(vehicle, math.random(0, 255), math.random(0, 255), math.random(0, 255))
-                VEHICLE.SET_VEHICLE_CUSTOM_SECONDARY_COLOUR(vehicle, math.random(0, 255), math.random(0, 255), math.random(0, 255))
-                VEHICLE.SET_VEHICLE_COLOURS(vehicle, math.random(0, 122), math.random(0, 122))
-                VEHICLE.SET_VEHICLE_EXTRA_COLOURS(vehicle, math.random(0, 122))
                 ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(ToggleGods))
                 coords = ENTITY.GET_ENTITY_COORDS(playerPed, false)
                 coords.x = coords['x']
@@ -161,7 +156,6 @@
                 PED.SET_PED_FIRING_PATTERN(attacker, 0xD31265F2)
                 PED.SET_PED_FIRING_PATTERN(attacker, 0xA018DB8A)
                 PED.SET_PED_FIRING_PATTERN(attacker, 0x9C74B406)
-                WEAPON.GIVE_DELAYED_WEAPON_TO_PED(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"), 9999, false)
                 PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
                 PED.SET_PED_COMBAT_ABILITY(attacker, 2)
                 PED.SET_PED_COMBAT_RANGE(attacker, 3)
@@ -187,25 +181,6 @@
                     HUD.SET_BLIP_FADE(BLIP, 255, -1)
                 end
                 local playerEnemy = players.get_position(pedUser)
-                local model = ENTITY.GET_ENTITY_MODEL(vehicleHash)
-                if model == util.joaat("strikeforce") then
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_MISSILE"))
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_BARRAGE"))
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_CANNON"))
-                elseif model == util.joaat("lazer") then
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
-                elseif model == util.joaat("rogue") then
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_MG"))
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_CANNON"))
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_MISSILE"))
-                elseif model == util.joaat("molotok") then
-                    VEHICLE.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MISSILE"))
-                    VEHICLE.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MG"))
-                else
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
-                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
-                end
                 WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
                 WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
                 VEHICLE.SET_VEHICLE_SHOOT_AT_TARGET(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
@@ -247,6 +222,7 @@
                 PED.SET_PED_CAN_RAGDOLL(attacker, false)
                 PED.SET_PED_ALERTNESS(attacker, 3)
                 TASK.SET_TASK_VEHICLE_CHASE_BEHAVIOR_FLAG(attacker, 1, true)
+                PED.REGISTER_TARGET(attacker, ped)
             end
         end
 
