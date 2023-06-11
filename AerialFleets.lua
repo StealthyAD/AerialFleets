@@ -26,7 +26,7 @@
 
         util.keep_running()
         util.require_natives(1681379138)
-        local SCRIPT_VERSION = "1.96A"
+        local SCRIPT_VERSION = "1.96AF"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -95,11 +95,11 @@
         local function escort_attack(pedUser, hash, surfaceVehicle)
             local limitSpeed = 3200.0
             local speedVehicle = 2650.0
-            if not players.is_in_interior(pedUser) then
+            if not players.is_in_interior(pedUser) and players.exists(pedUser) then
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pedUser)
-                local altitude = surfaceVehicle and math.random(300, 750) or math.random(100, 200)
+                local altitude = surfaceVehicle and math.random(440, 660) or math.random(100, 200)
                 request_model_load(vehicleHash)
                 local playerPos = players.get_position(playerPed)
                 playerPos.z = playerPos.z + altitude
@@ -107,9 +107,7 @@
                 local offsetY = math.random(surfaceVehicle and -125 or -100, surfaceVehicle and 10 or -5)
                 local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(playerPed, offsetX, offsetY, playerPos.z)
                 local vehicle = entities.create_vehicle(vehicleHash, coords, ENTITY.GET_ENTITY_HEADING(playerPed))
-                if not STREAMING.HAS_MODEL_LOADED(vehicle) then
-                    request_model_load(vehicle)
-                end
+                if not STREAMING.HAS_MODEL_LOADED(vehicle) then request_model_load(vehicle) end
                 for i = 0, 49 do
                     local num = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)
                     if vehicleHash == util.joaat("rogue") or
@@ -181,8 +179,27 @@
                     HUD.SET_BLIP_FADE(BLIP, 255, -1)
                 end
                 local playerEnemy = players.get_position(pedUser)
-                WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
-                WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
+                local model = ENTITY.GET_ENTITY_MODEL(vehicle)
+                if model == util.joaat("strikeforce") then -- Only 3 weapons usable per vehicle (https://gtamods.com/wiki/Handling.meta)
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_MISSILE"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_BARRAGE"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_STRIKEFORCE_CANNON"))
+                elseif model == util.joaat("lazer") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
+                elseif model == util.joaat("rogue") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_MG"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_CANNON"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_ROGUE_MISSILE"))
+                elseif model == util.joaat("molotok") or model == util.joaat("nokota") or model == util.joaat("pyro") or model == util.joaat("starling") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MISSILE"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MG"))
+                elseif model == util.joaat("seabreeze") then
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_SEABREEZE_MG"))
+                else
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
+                end
                 VEHICLE.SET_VEHICLE_SHOOT_AT_TARGET(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
                 if VEHICLE.IS_THIS_MODEL_A_HELI(vehicleHash) then
                     TASK.TASK_HELI_CHASE(attacker, ped, playerEnemy.x, playerEnemy.y, playerEnemy.z)
@@ -222,7 +239,6 @@
                 PED.SET_PED_CAN_RAGDOLL(attacker, false)
                 PED.SET_PED_ALERTNESS(attacker, 3)
                 TASK.SET_TASK_VEHICLE_CHASE_BEHAVIOR_FLAG(attacker, 1, true)
-                PED.REGISTER_TARGET(attacker, ped)
             end
         end
 
