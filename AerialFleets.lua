@@ -26,7 +26,7 @@
 
         util.keep_running()
         util.require_natives(1681379138)
-        local SCRIPT_VERSION = "1.96AF"
+        local SCRIPT_VERSION = "1.97"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -119,7 +119,22 @@
                         vehicleHash == util.joaat("starling") or
                         vehicleHash == util.joaat("akula") then
                         VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
+                    
                     end
+                end
+                if vehicleHash == util.joaat("raiju") then
+                    VEHICLE.SET_VEHICLE_LIVERY(vehicle, 8)
+                    for i = 0, 47 do
+                        local num = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)
+                        VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
+                    end
+                    VEHICLE.SET_VEHICLE_FLIGHT_NOZZLE_POSITION_IMMEDIATE(vehicle, 0)
+                elseif vehicleHash == util.joaat("avenger3") then
+                    for i = 0, 47 do
+                        local num = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)
+                        VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
+                    end
+                    VEHICLE.SET_VEHICLE_FLIGHT_NOZZLE_POSITION_IMMEDIATE(vehicle, 0)
                 end
                 VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
                 VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, speedVehicle)
@@ -132,6 +147,7 @@
                 VEHICLE.SET_PLANE_TURBULENCE_MULTIPLIER(vehicle, 0.0)
                 VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
                 VEHICLE.SET_VEHICLE_WINDOW_TINT(vehicle, 1)
+                VEHICLE.SET_VEHICLE_FLIGHT_NOZZLE_POSITION_IMMEDIATE(vehicle, 0)
                 ENTITY.SET_ENTITY_INVINCIBLE(vehicle, menu.get_value(ToggleGods))
                 coords = ENTITY.GET_ENTITY_COORDS(playerPed, false)
                 coords.x = coords['x']
@@ -196,6 +212,13 @@
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_DOGFIGHTER_MG"))
                 elseif model == util.joaat("seabreeze") then
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_SEABREEZE_MG"))
+                elseif model == util.joaat("avenger3") then -- Avenger Customized
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_AVENGER_CANNON"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_AVENGER3_MINIGUN"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_AVENGER3_MISSILE"))
+                elseif model == util.joaat("raiju") then -- F-160 Raiju
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_RAIJU_CANNONS"))
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_RAIJU_MISSILES"))
                 else
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
@@ -225,6 +248,7 @@
                     VEHICLE.SET_HELI_BLADES_FULL_SPEED(vehicle)
                     VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
                     VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(vehicle, true)
+                    VEHICLE.SET_VEHICLE_FLIGHT_NOZZLE_POSITION_IMMEDIATE(vehicle, 0)
                 end
                 TASK.SET_DRIVE_TASK_CRUISE_SPEED(attacker, speedVehicle)
                 TASK.SET_DRIVE_TASK_MAX_CRUISE_SPEED(attacker, limitSpeed)
@@ -394,6 +418,8 @@
         ToggleGods = TaskForce:toggle_loop("Toggle Godmode", {}, "Release these player without godmode, fight like real, turn on = session is dead", function()end)
         local vehicleModelsToDelete = {
             util.joaat("lazer"),
+            util.joaat("raiju"),
+            util.joaat("avenger3"),
             util.joaat("hydra"),
             util.joaat("strikeforce"),
             util.joaat("molotok"),
@@ -707,6 +733,8 @@
 
         local tableSpawners = {
             ["P-996 Lazer"] = "lazer",
+            ["F-160 Raiju"] = "raiju",
+            ["Mammoth Avenger"] = "avenger3",
             ["V-65 Molotok"] = "molotok",
             ["Western Rogue"] = "rogue",
             ["Buckingham Pyro"] = "pyro",
