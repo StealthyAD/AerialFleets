@@ -26,7 +26,7 @@
 
         util.keep_running()
         util.require_natives(1681379138)
-        local SCRIPT_VERSION = "1.97"
+        local SCRIPT_VERSION = "2.00"
         local STAND_VERSION = menu.get_version().version
         local AerialFleetMSG = "Aerial Fleets v"..SCRIPT_VERSION
 
@@ -55,6 +55,25 @@
                     break
                 end
                 util.yield()
+            end
+        end
+
+        local function set_entity_face_entity(entity, target, usePitch)
+            local pos1 = ENTITY.GET_ENTITY_COORDS(entity, false)
+            local pos2 = ENTITY.GET_ENTITY_COORDS(target, false)
+            local rel = v3.new(pos2)
+            rel:sub(pos1)
+            local rot = rel:toRot()
+            if not usePitch then
+                ENTITY.SET_ENTITY_HEADING(entity, rot.z)
+            else
+                ENTITY.SET_ENTITY_ROTATION(entity, rot.x, rot.y, rot.z, 2, 0)
+            end
+        end
+
+        local function deleteEntities(...)
+            for _, entity in ipairs({...}) do
+                entities.delete(entity)
             end
         end
 
@@ -93,8 +112,8 @@
         }
 
         local function escort_attack(pedUser, hash, surfaceVehicle)
-            local limitSpeed = 3200.0
-            local speedVehicle = 2650.0
+            local limitSpeed = 200.0
+            local speedVehicle = 100.0
             if not players.is_in_interior(pedUser) and players.exists(pedUser) then
                 local vehicleHash = util.joaat(hash)
                 local playerPed = PLAYER.PLAYER_PED_ID()
@@ -113,10 +132,10 @@
                     if vehicleHash == util.joaat("rogue") or
                         vehicleHash == util.joaat("pyro") or
                         vehicleHash == util.joaat("nokota") or
-                        vehicleHash == util.joaat("strikeforce") or
                         vehicleHash == util.joaat("molotok") or
                         vehicleHash == util.joaat("hunter") or
                         vehicleHash == util.joaat("starling") or
+                        vehicleHash == util.joaat("microlight") or
                         vehicleHash == util.joaat("akula") then
                         VEHICLE.SET_VEHICLE_MOD(vehicle, i, num - 1, true)
                     
@@ -137,11 +156,15 @@
                     VEHICLE.SET_VEHICLE_FLIGHT_NOZZLE_POSITION_IMMEDIATE(vehicle, 0)
                 end
                 VEHICLE.CONTROL_LANDING_GEAR(vehicle, 3)
-                VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, speedVehicle)
-                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, 100) -- multiplier speed
+                if vehicleHash == util.joaat("microlight") then
+                    VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, 75)
+                    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, 1) -- multiplier speed
+                else
+                    VEHICLE.SET_VEHICLE_FORWARD_SPEED(vehicle, speedVehicle)
+                    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, 100) -- multiplier speed
+                end
                 VEHICLE.SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON(vehicle, false)
                 VEHICLE.SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON_SYNCED(vehicle, false)
-                VEHICLE.SET_VEHICLE_MAX_SPEED(vehicle, limitSpeed)
                 VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, 4)
                 VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, true)
                 VEHICLE.SET_PLANE_TURBULENCE_MULTIPLIER(vehicle, 0.0)
@@ -219,6 +242,8 @@
                 elseif model == util.joaat("raiju") then -- F-160 Raiju
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_RAIJU_CANNONS"))
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_RAIJU_MISSILES"))
+                elseif model == util.joaat("microlight") then -- PARAGLIDER
+                    WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_MICROLIGHT_MG"))
                 else
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLANE_ROCKET"))
                     WEAPON.SET_CURRENT_PED_VEHICLE_WEAPON(attacker, util.joaat("VEHICLE_WEAPON_PLAYER_LAZER"))
@@ -316,7 +341,7 @@
             EToggleOrg = not toggle
         end
 
-        local TaskForceDesc = "The \"Task Force\" consists of flooding the session with aircraft for which the host acts as an escort and lets the aircraft appear and act autonomously as a killer AI and neither the host will be able to do anything and will not take control of the entities."
+        local TaskForceDesc = "The \"Task Force\" floods the session with autonomous killer AI aircraft, escorted by the host. The host cannot control these entities.\n\nNote: This option is uncontrollable with \"Toggle Godmode\" on.\n\nRobert Oppenheimer: \"Now I am become Death, the destroyer of worlds.\""
 
     ----========================================----
     ---              Update Parts
@@ -388,6 +413,7 @@
         local ExcludeParts = AerialFleets:list("Exclusions", {"afexclusions"})
         local Detections = AerialFleets:list("Detections", {"afdetections"}, "Detect any ways and remove them by consequence.")
         local TaskForce = AerialFleets:list("Task Force", {"aftaskforce"})
+        local EscortMode = AerialFleets:list("Escort Mode (Unstable)", {"afescortm"})
         local WeatherParts = AerialFleets:list("World & Weather", {"afworld"})
         local Settings = AerialFleets:list("Settings", {"afsettings"})
 
@@ -742,6 +768,7 @@
             ["LF-22 Starling"] = "starling",
             ["Western Seabreeze"] = "seabreeze",
             ["B-11 Strikeforce"] = "strikeforce",
+            ["Ultralight"] = "microlight"
         }
 
         local tempSpawners = {}
@@ -779,6 +806,7 @@
 
         ShowingMSGS = PresetSpawningTF:toggle_loop("Show Messages", {}, "", function()end)
         CustomPresets = PresetSpawningTF:toggle_loop("Toggle Preset Vehicle", {}, "", function()end)
+        ToggleMultiple = PresetSpawningTF:toggle_loop("Toggle Multiplier Planes", {}, "Risky: Spawn 2x more fighter jets/helicopters", function()end)
         ToggleSurfaceTF = PresetSpawningTF:toggle_loop("Toggle Surface Task Force", {}, "Send the air force to ground control. Watching in the sky, you will not be able to see Jets but you will receive a notification if the player targetted has been killed.\n\n- It is more efficient to be on the ground to make surgical strikes with such perfect accuracy.\n- In the air, you will be very efficient and in groups unlike on the ground where the planes will hit different areas.", function()end)
         PresetSpawningTF:divider("Presets Vehicles (Planes)")
         for _, spawner in ipairs(tempSpawners) do
@@ -797,10 +825,10 @@
                             AerialFleetsNotify("To operate the action, you need to be in a ground vehicle.")
                             return
                         end
-                    elseif not PED.IS_PED_IN_ANY_PLANE(player) then
-                        AerialFleetsNotify("To operate the action, you need to be in a plane.")
+                    elseif not PED.IS_PED_IN_ANY_PLANE(player) and not PED.IS_PED_IN_ANY_HELI(player) then
+                        AerialFleetsNotify("To operate the action, you need to be in a plane or heli.")
                         return
-                    end
+                    end                    
                 else
                     AerialFleetsNotify("Please enable \"Toggle Preset Vehicle\" to work for "..spawnerName)
                     return
@@ -818,8 +846,9 @@
                     chat.send_message(msgPresets, false, true, true)
                 end                            
                 for _, pid in pairs(playerList) do
-                    if AvailableSession() then
-                        if players.get_name(pid) ~= "UndiscoveredPlayer" then
+                    if AvailableSession() and players.get_name(pid) ~= "UndiscoveredPlayer" then
+                        local times = menu.get_value(ToggleMultiple) and 2 or 1
+                        for _ = 1, times do
                             escort_attack(pid, spawnerModel, isSurfaceTF)
                             util.yield(delaySpawningPresets * 1000)
                         end
@@ -862,8 +891,8 @@
                             AerialFleetsNotify("To operate the action, you need to be in a ground vehicle.")
                             return
                         end
-                    elseif not PED.IS_PED_IN_ANY_PLANE(player) then
-                        AerialFleetsNotify("To operate the action, you need to be in a plane.")
+                    elseif not PED.IS_PED_IN_ANY_PLANE(player) and not PED.IS_PED_IN_ANY_HELI(player) then
+                        AerialFleetsNotify("To operate the action, you need to be in a plane or heli.")
                         return
                     end
                 else
@@ -892,6 +921,243 @@
                 end
             end)
         end
+
+    ---========================================----
+    ---           Escort Important Vehicle
+    ----========================================----
+
+        local hashJet
+        local slowPlaneOffset = 0
+        local slowPlaneSpeedDecrease = 0
+
+        local modelName = "lazer"
+        hashJet = util.joaat(modelName)
+        EscortMode:text_input("Enter Model", {"afmodelesc"}, "Enter right model (Plane or Helicopters allowed).", function(txtModel)
+            if txtModel ~= "" then
+                local modelHash = util.joaat(txtModel)
+                if STREAMING.IS_MODEL_A_VEHICLE(modelHash) then
+                    local vehicleClass = VEHICLE.GET_VEHICLE_CLASS_FROM_NAME(modelHash)
+                    if vehicleClass == 15 or vehicleClass == 16 then
+                        hashJet = modelHash
+                        modelName = txtModel
+                    else
+                        AerialFleetsNotify("Invalid vehicle model: " .. txtModel .. ". Only aerial vehicles (planes and helicopters) are allowed.")
+                        modelName = "lazer"
+                        hashJet = util.joaat("lazer")
+                    end
+                else
+                    AerialFleetsNotify("Invalid vehicle model: " .. txtModel)
+                    modelName = "lazer"
+                    hashJet = util.joaat("lazer")
+                end
+            end
+        end, modelName)
+
+        squadnum = EscortMode:slider("Squadron Number", {"afsquadn"}, "Shows your squadron number while turning on Blip", 1, 36, 1, 1, function()end)
+
+        BlipSquads = EscortMode:toggle_loop("Toggle Blip", {}, "", function()end)
+
+        EscortMode:toggle_loop("Squad Protection", {"afescort"}, "Protect yourself and do formation.", function()
+            local heading = ENTITY.GET_ENTITY_HEADING(players.user_ped())
+            local hashTarget = 1082797888 --:1082797888
+            util.request_model(hashJet)
+            util.request_model(hashTarget)
+            --===========================================================================================--
+            -- Area A (2x)
+            local aJetSpeed
+            local bJetSpeed
+            -- Area B (4x)
+            local cJetSpeed
+            local dJetSpeed
+            --===========================================================================================--
+            --CREATE_PED_INSIDE_VEHICLE
+            local function calculateOffsetCoords(owner, offsetX, offsetY, offsetZ)
+                return ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(owner, offsetX, offsetY, offsetZ)
+            end
+
+            local function addBlipForJet(jetOffset)
+                if menu.get_value(BlipSquads) == true then
+                    local BLIP = HUD.ADD_BLIP_FOR_ENTITY(jetOffset)
+                    local blipSprite = 686 + menu.get_value(squadnum) - 1
+                    HUD.SET_BLIP_SPRITE(BLIP, blipSprite)
+                    HUD.SET_BLIP_FADE(BLIP, 255, -1)
+                    return BLIP 
+                end
+                return nil
+            end
+            --===========================================================================================--
+            local owner = players.user_ped()
+            local PlayerJetOffset = calculateOffsetCoords(owner, 0, 0, 200)
+            -- Area A
+            local aJetOffset = calculateOffsetCoords(owner, -50, -50, 200)
+            local bJetOffset = calculateOffsetCoords(owner, 50, -50, 200)
+            local aJetAimLoc = calculateOffsetCoords(owner, -20, 0, 0)
+            local bJetAimLoc = calculateOffsetCoords(owner, 20, 0, 0)
+            -- Area B
+            local cJetOffset = calculateOffsetCoords(owner, -100, -100, 200)
+            local dJetOffset = calculateOffsetCoords(owner, 100, -100, 200)
+            local cJetAimLoc = calculateOffsetCoords(owner, -40, -40, 0)
+            local dJetAimLoc = calculateOffsetCoords(owner, 40, -40, 0)
+            --===========================================================================================--
+            local function assignPlaneMission(pilot, jet, target, attackTask)
+                TASK.TASK_PLANE_MISSION(pilot, jet, PlayerJet, target, 0, 0, 0, attackTask, 100.0, 0.0, -1.0, 5000, 5000, true)
+            end
+    
+            local function adjustJetSpeed(jet, target, offset, speedDecrease)
+                local jetLoc = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(jet, 0, 0, 0)
+                local targetLoc = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target, 0, 0, 0)
+                local distance = MISC.GET_DISTANCE_BETWEEN_COORDS(jetLoc.x, jetLoc.y, jetLoc.z, targetLoc.x, targetLoc.y, targetLoc.z, true)
+                local speed = (distance < 40 + offset) and -0.8 - speedDecrease or 0.5 + speedDecrease
+                ENTITY.APPLY_FORCE_TO_ENTITY_CENTER_OF_MASS(jet, 1, 0, speed, 0, true, true, true, true)
+            end
+    
+            local function createAndSetupJet(hashJet, offset, heading)
+                local jet = entities.create_vehicle(hashJet, offset, heading)
+                local pilot = PED.CREATE_RANDOM_PED_AS_DRIVER(jet, true)
+                VEHICLE.SET_VEHICLE_ENGINE_ON(jet, true, true, 0)
+                VEHICLE.CONTROL_LANDING_GEAR(jet, 3)
+                VEHICLE.SET_VEHICLE_MAX_SPEED(jet, 10000.0)
+                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(jet, 100.0)
+                VEHICLE.SET_VEHICLE_WINDOW_TINT(jet, 2)
+                ENTITY.SET_ENTITY_INVINCIBLE(jet, true)
+                VEHICLE.SET_VEHICLE_FORCE_AFTERBURNER(jet, true)
+                VEHICLE.SET_VEHICLE_FLIGHT_NOZZLE_POSITION_IMMEDIATE(jet, 0)
+                return jet, pilot
+            end
+            
+            local function createAndSetupTarget(hashTarget, aimLoc)
+                local target = entities.create_object(hashTarget, aimLoc)
+                ENTITY.SET_ENTITY_COLLISION(target, false, false)
+                ENTITY.SET_ENTITY_VISIBLE(target, false, false)
+                return target
+            end
+            
+            local function setupPedAsEnemy(target)
+                PED.SET_PED_AS_ENEMY(target, false)
+                PED.SET_DRIVER_AGGRESSIVENESS(target, 0.0)
+                PED.SET_PED_CONFIG_FLAG(target, 281, true)
+                PED.SET_PED_CONFIG_FLAG(target, 2, true)
+                PED.SET_PED_CONFIG_FLAG(target, 33, false)
+            end
+            
+            local pedm = players.user_ped()
+            
+            if not ENTITY.DOES_ENTITY_EXIST(PlayerJet) then
+                if PED.IS_PED_IN_ANY_PLANE(pedm) then
+                    PlayerJet = PED.GET_VEHICLE_PED_IS_IN(pedm, true)
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(PlayerJet, PlayerJetOffset.x, PlayerJetOffset.y, PlayerJetOffset.z, false, false, false)
+                else
+                    PlayerJet = entities.create_vehicle(hashJet, PlayerJetOffset, heading)
+                end
+                VEHICLE.SET_VEHICLE_CAN_BE_TARGETTED(PlayerJet, false)
+                VEHICLE.CONTROL_LANDING_GEAR(PlayerJet, 3)
+                VEHICLE.SET_VEHICLE_WINDOW_TINT(PlayerJet, 2)
+                ENTITY.SET_ENTITY_INVINCIBLE(PlayerJet, true)
+                PED.SET_PED_INTO_VEHICLE(owner, PlayerJet, -1)
+                util.yield(1)
+                ENTITY.APPLY_FORCE_TO_ENTITY_CENTER_OF_MASS(PlayerJet, 1, 0, 100, 0, true, true, true, true)
+                --===========================================================================================--
+                -- Area A
+                aTarget = createAndSetupTarget(hashTarget, aJetAimLoc)
+                bTarget = createAndSetupTarget(hashTarget, bJetAimLoc)
+                JetA, PilotA = createAndSetupJet(hashJet, aJetOffset, heading)
+                JetB, PilotB = createAndSetupJet(hashJet, bJetOffset, heading)
+                setupPedAsEnemy(aTarget)
+                setupPedAsEnemy(bTarget)
+                aJetBlip = addBlipForJet(aTarget)
+                bJetBlip = addBlipForJet(bTarget)
+                -- Area B
+                cTarget = createAndSetupTarget(hashTarget, cJetAimLoc)
+                dTarget = createAndSetupTarget(hashTarget, dJetAimLoc)
+                JetC, PilotC = createAndSetupJet(hashJet, cJetOffset, heading)
+                JetD, PilotD = createAndSetupJet(hashJet, dJetOffset, heading)
+                setupPedAsEnemy(cTarget)
+                setupPedAsEnemy(dTarget)
+                cJetBlip = addBlipForJet(cTarget)
+                dJetBlip = addBlipForJet(dTarget)
+                --===========================================================================================--
+            end
+            -- Area A
+            set_entity_face_entity(JetA, aTarget, true)
+            set_entity_face_entity(JetB, bTarget, true)
+            local aJetRealLoc = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(JetA, 0, 0, 0)
+            local bJetRealLoc = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(JetB, 0, 0, 0)
+            -- Area B
+            local cJetRealLoc = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(JetC, 0, 0, 0)
+            local dJetRealLoc = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(JetD, 0, 0, 0)
+            set_entity_face_entity(JetC, cTarget, true)
+            set_entity_face_entity(JetD, dTarget, true)
+            --===========================================================================================--
+            local function calculateJetSpeed(jetRealLoc, jetAimLoc, offset, speedDecrease)
+                local distance = MISC.GET_DISTANCE_BETWEEN_COORDS(jetRealLoc.x, jetRealLoc.y, jetRealLoc.z, jetAimLoc.x, jetAimLoc.y, jetAimLoc.z, true)
+                return (distance < 40 + offset) and -0.8 - speedDecrease or 0.5 + speedDecrease
+            end
+    
+            local function setMaxSpeed(jet, speed)
+                VEHICLE.SET_VEHICLE_MAX_SPEED(jet, speed)
+                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(jet, speed)
+            end
+            --===========================================================================================--
+            -- Area A
+            aJetSpeed = calculateJetSpeed(aJetRealLoc, aJetAimLoc, slowPlaneOffset, slowPlaneSpeedDecrease)
+            bJetSpeed = calculateJetSpeed(bJetRealLoc, bJetAimLoc, slowPlaneOffset, slowPlaneSpeedDecrease)
+            adjustJetSpeed(JetA, aTarget, slowPlaneOffset, slowPlaneSpeedDecrease)
+            adjustJetSpeed(JetB, bTarget, slowPlaneOffset, slowPlaneSpeedDecrease)
+            -- Area B
+            cJetSpeed = calculateJetSpeed(cJetRealLoc, cJetAimLoc, slowPlaneOffset, slowPlaneSpeedDecrease)
+            dJetSpeed = calculateJetSpeed(dJetRealLoc, dJetAimLoc, slowPlaneOffset, slowPlaneSpeedDecrease)
+            adjustJetSpeed(JetC, cTarget, slowPlaneOffset, slowPlaneSpeedDecrease)
+            adjustJetSpeed(JetD, dTarget, slowPlaneOffset, slowPlaneSpeedDecrease)
+            --===========================================================================================--
+            if not PED.IS_PED_ON_FOOT(owner) then
+                local function manageJetAndTarget(jet, target, jetSpeed, aimLoc)
+                    ENTITY.APPLY_FORCE_TO_ENTITY_CENTER_OF_MASS(jet, 1, 0, jetSpeed, 0, true, true, true, true)
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(target, aimLoc.x, aimLoc.y, aimLoc.z, false, false, false)
+                    PED.SET_PED_AS_ENEMY(target, false)
+                    WEAPON.GIVE_DELAYED_WEAPON_TO_PED(target, 0x8818E1C9, 1, false) -- 0x8818E1C9 est l'ID de l'arme "Unarmed"
+                end
+    
+                local function syncEscortJetSpeed(jet, playerJet)
+                    local playerJetSpeed = ENTITY.GET_ENTITY_SPEED(playerJet)
+                    VEHICLE.SET_VEHICLE_FORWARD_SPEED(jet, playerJetSpeed)
+                end
+                --===========================================================================================--
+                -- Area A
+                syncEscortJetSpeed(JetA, PlayerJet)
+                syncEscortJetSpeed(JetB, PlayerJet)
+                -- Area B
+                syncEscortJetSpeed(JetC, PlayerJet)
+                syncEscortJetSpeed(JetD, PlayerJet)
+                --===========================================================================================--
+    
+                local playerJetSpeed = ENTITY.GET_ENTITY_SPEED(PlayerJet)
+                local speedMultiplier = 1500.0
+                --===========================================================================================--
+                -- Area A
+                setMaxSpeed(JetA, playerJetSpeed * speedMultiplier * 4.0)
+                setMaxSpeed(JetB, playerJetSpeed * speedMultiplier * 4.0)
+                manageJetAndTarget(JetA, aTarget, aJetSpeed, aJetAimLoc)
+                manageJetAndTarget(JetB, bTarget, bJetSpeed, bJetAimLoc)
+                -- Area B
+                setMaxSpeed(JetC, playerJetSpeed * speedMultiplier * 4.0)
+                setMaxSpeed(JetD, playerJetSpeed * speedMultiplier * 4.0)
+                manageJetAndTarget(JetC, cTarget, cJetSpeed, cJetAimLoc)
+                manageJetAndTarget(JetD, dTarget, dJetSpeed, dJetAimLoc)
+                --===========================================================================================--
+                local attackTask = 7
+                local owner = players.user_ped()
+                --===========================================================================================--
+                -- Area A
+                assignPlaneMission(PilotA, JetA, owner, attackTask)
+                assignPlaneMission(PilotB, JetB, owner, attackTask)
+                -- Area B
+                assignPlaneMission(PilotC, JetC, cTarget, attackTask)
+                assignPlaneMission(PilotD, JetD, dTarget, attackTask)
+                --===========================================================================================--
+            end
+        end, function()
+            deleteEntities(PlayerJet, JetA, aTarget, JetB, bTarget, JetC, cTarget, JetD, dTarget)
+        end)
 
     ----========================================----
     ---             Detection Vehicles
