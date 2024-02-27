@@ -6,3 +6,5 @@ AerialFleets is a Lua Script which able to intervene more aerial planes includin
 # Installation
 To install, simply click "Download ZIP" and extract the .zip. Copy and Paste everything into "%AppData%\Roaming\Stand\Lua Scripts" folder, that's the easiest way to download.
 
+# read this 
+For aggressive / sweet spot users, read me, you are targetted.
